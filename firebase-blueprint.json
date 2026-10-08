@@ -1,0 +1,167 @@
+{
+  "entities": {
+    "Condo": {
+      "title": "Condo",
+      "description": "Configurações e dados cadastrais do condomínio",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "cnpj": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "blocksCount": { "type": "number" },
+        "totalApartments": { "type": "number" },
+        "workScale": { "type": "string", "enum": ["12x36", "8h_3turnos"] },
+        "workScaleNotes": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "address"]
+    },
+    "ClientCondo": {
+      "title": "ClientCondo",
+      "description": "Cadastro de condomínio cliente para gestão do desenvolvedor",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "cnpj": { "type": "string" },
+        "address": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "active": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["ativo", "inativo", "degustacao"] },
+        "createdAt": { "type": "string" },
+        "blocksCount": { "type": "number" },
+        "aptsCount": { "type": "number" },
+        "workScale": { "type": "string", "enum": ["12x36", "8h_3turnos"] },
+        "workScaleNotes": { "type": "string" }
+      },
+      "required": ["id", "name", "address", "city", "active", "status"]
+    },
+    "User": {
+      "title": "User",
+      "description": "Usuários e operadores da portaria",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "porteiro", "supervisor", "sindico", "dev"] },
+        "phone": { "type": "string" },
+        "active": { "type": "boolean" },
+        "shiftTurn": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "role", "active"]
+    },
+    "AccessLog": {
+      "title": "AccessLog",
+      "description": "Registro de controle de acesso de moradores, visitantes e prestadores",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "personName": { "type": "string" },
+        "personType": { "type": "string", "enum": ["morador", "visitante", "prestador", "agente_publico", "entregador"] },
+        "document": { "type": "string" },
+        "apartmentId": { "type": "string" },
+        "blockId": { "type": "string" },
+        "purpose": { "type": "string" },
+        "entryTime": { "type": "string" },
+        "exitTime": { "type": "string" },
+        "status": { "type": "string", "enum": ["dentro", "saiu", "aguardando_autorizacao", "recusado", "cancelado"] },
+        "operatorName": { "type": "string" }
+      },
+      "required": ["id", "personName", "personType", "entryTime", "status"]
+    },
+    "Delivery": {
+      "title": "Delivery",
+      "description": "Controle de encomendas e correspondências recebidas na portaria",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string" },
+        "apartmentId": { "type": "string" },
+        "blockId": { "type": "string" },
+        "recipientName": { "type": "string" },
+        "type": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string" },
+        "receivedAt": { "type": "string" },
+        "pickedUpAt": { "type": "string" },
+        "pickedUpBy": { "type": "string" }
+      },
+      "required": ["id", "code", "apartmentId", "recipientName", "status", "receivedAt"]
+    },
+    "Occurrence": {
+      "title": "Occurrence",
+      "description": "Livro de ocorrências e registros de eventos da portaria",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "description": { "type": "string" },
+        "severity": { "type": "string", "enum": ["baixa", "media", "alta", "urgente"] },
+        "status": { "type": "string", "enum": ["aberta", "em_analise", "resolvida", "cancelada"] },
+        "reportedBy": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "title", "category", "severity", "status", "createdAt"]
+    },
+    "CCTVCamera": {
+      "title": "CCTVCamera",
+      "description": "Pontos e canais de câmeras e DVR cadastrados",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "zone": { "type": "string" },
+        "location": { "type": "string" },
+        "status": { "type": "string" },
+        "brand": { "type": "string" },
+        "ipAddress": { "type": "string" },
+        "dvrHost": { "type": "string" },
+        "dvrChannel": { "type": "number" },
+        "feedType": { "type": "string" },
+        "snapshotUrl": { "type": "string" },
+        "streamUrl": { "type": "string" },
+        "rtspUrl": { "type": "string" },
+        "externalViewerUrl": { "type": "string" }
+      },
+      "required": ["id", "name", "zone", "location", "status"]
+    }
+  },
+  "firestore": {
+    "/condos/{condoId}": {
+      "schema": "Condo",
+      "description": "Configurações gerais do condomínio ativo"
+    },
+    "/client_condos/{clientCondoId}": {
+      "schema": "ClientCondo",
+      "description": "Condomínios cadastrados para suporte e gestão multi-unidades"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Usuários e operadores cadastrados"
+    },
+    "/access_logs/{logId}": {
+      "schema": "AccessLog",
+      "description": "Histórico de entradas e saídas da portaria"
+    },
+    "/deliveries/{deliveryId}": {
+      "schema": "Delivery",
+      "description": "Encomendas e entregas aguardando ou retiradas"
+    },
+    "/occurrences/{occurrenceId}": {
+      "schema": "Occurrence",
+      "description": "Livro de ocorrências da guarita"
+    },
+    "/cctv_cameras/{cameraId}": {
+      "schema": "CCTVCamera",
+      "description": "Câmeras e canais de DVR vinculados"
+    }
+  }
+}

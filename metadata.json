@@ -1,0 +1,10 @@
+{
+  "name": "Cloudflare portaria 360",
+  "description": "Sistema completo e responsivo para gestão diária de portaria condominial: controle de acessos, moradores, encomendas com WhatsApp, ocorrências e passagem de turno.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

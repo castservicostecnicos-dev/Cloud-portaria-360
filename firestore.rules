@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Condo Configuration Collection
+    match /condos/{condoId} {
+      allow read: if isValidId(condoId);
+      allow write: if isValidId(condoId);
+    }
+
+    // Client Condos Multi-management
+    match /client_condos/{clientCondoId} {
+      allow read: if isValidId(clientCondoId);
+      allow write: if isValidId(clientCondoId);
+    }
+
+    // Users and Operators
+    match /users/{userId} {
+      allow read: if isValidId(userId);
+      allow write: if isValidId(userId);
+    }
+
+    // Access Logs (Gatehouse entries and exits)
+    match /access_logs/{logId} {
+      allow read: if isValidId(logId);
+      allow write: if isValidId(logId);
+    }
+
+    // Deliveries and Packages
+    match /deliveries/{deliveryId} {
+      allow read: if isValidId(deliveryId);
+      allow write: if isValidId(deliveryId);
+    }
+
+    // Occurrences & Shift Handover
+    match /occurrences/{occurrenceId} {
+      allow read: if isValidId(occurrenceId);
+      allow write: if isValidId(occurrenceId);
+    }
+
+    // CCTV Cameras & DVR Channels
+    match /cctv_cameras/{cameraId} {
+      allow read: if isValidId(cameraId);
+      allow write: if isValidId(cameraId);
+    }
+  }
+}
