@@ -68,8 +68,17 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   // Password Recovery Modal State
+  const [selectedUserToReset, setSelectedUserToReset] = useState<User | null>(null);
   const [newPasswordInput, setNewPasswordInput] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
+
+  // Manage Porteiros per Condo Modal State
+  const [viewingPorteirosCondo, setViewingPorteirosCondo] = useState<ClientCondo | null>(null);
+  const [isAddingPorteiro, setIsAddingPorteiro] = useState(false);
+  const [newPorteiroName, setNewPorteiroName] = useState('');
+  const [newPorteiroEmail, setNewPorteiroEmail] = useState('');
+  const [newPorteiroPassword, setNewPorteiroPassword] = useState('portaria123');
+  const [newPorteiroShift, setNewPorteiroShift] = useState('');
 
   // Feedback banner
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -240,32 +249,40 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
   // Open Password Recovery Modal
   const handleOpenResetPassword = (c: ClientCondo) => {
     setResetPasswordCondo(c);
-    setNewPasswordInput(c.admPredial?.password || 'senha123');
+    const condoUsers = storage.getAllUsers().filter(
+      (u) => u.condoId === c.id || (c.admPredial && u.email.toLowerCase() === c.admPredial.email.toLowerCase())
+    );
+    const targetUser = condoUsers.find((u) => u.role === 'admin') || condoUsers[0] || null;
+    setSelectedUserToReset(targetUser);
+    setNewPasswordInput(targetUser?.password || c.admPredial?.password || 'senha123');
     setCopiedKey(false);
   };
 
-  // Save New Password for ADM Predial
+  // Save New Password
   const handleSaveResetPassword = () => {
     if (!resetPasswordCondo || !newPasswordInput.trim()) return;
 
-    const admId = resetPasswordCondo.admPredial?.id;
-    if (admId) {
-      storage.resetAdmPassword(admId, newPasswordInput.trim());
+    if (selectedUserToReset) {
+      storage.resetUserPassword(selectedUserToReset.id, newPasswordInput.trim());
     } else {
-      // Direct update on ClientCondo
-      const updated = {
-        ...resetPasswordCondo,
-        admPredial: {
-          ...resetPasswordCondo.admPredial,
-          password: newPasswordInput.trim(),
-        },
-      };
-      storage.saveClientCondo(updated);
+      const admId = resetPasswordCondo.admPredial?.id;
+      if (admId) {
+        storage.resetAdmPassword(admId, newPasswordInput.trim());
+      } else {
+        const updated = {
+          ...resetPasswordCondo,
+          admPredial: {
+            ...resetPasswordCondo.admPredial,
+            password: newPasswordInput.trim(),
+          },
+        };
+        storage.saveClientCondo(updated);
+      }
     }
 
     refreshData();
     setResetPasswordCondo(null);
-    triggerFeedback('Senha do ADM Predial atualizada com sucesso!');
+    triggerFeedback('Senha do usuário atualizada com sucesso pelo Dev Master!');
   };
 
   const handleCopyPassword = () => {
@@ -274,13 +291,63 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
     setTimeout(() => setCopiedKey(false), 2000);
   };
 
-  // Delete Condominium
+  // Delete Condominium with strict porteiro revocation
   const handleConfirmDelete = () => {
     if (!condoToDelete) return;
+    const porteirosCount = allUsers.filter((u) => u.role === 'porteiro' && u.condoId === condoToDelete.id).length;
     storage.deleteClientCondo(condoToDelete.id);
     refreshData();
-    triggerFeedback(`Condomínio "${condoToDelete.name}" excluído.`);
+    triggerFeedback(`Condomínio "${condoToDelete.name}" excluído. ${porteirosCount} porteiro(s) vinculado(s) excluído(s) e acesso cancelado imediatamente.`);
+    if (viewingPorteirosCondo?.id === condoToDelete.id) {
+      setViewingPorteirosCondo(null);
+    }
     setCondoToDelete(null);
+  };
+
+  // Create Porteiro strictly tied to viewing condo
+  const handleCreatePorteiroForCondo = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!viewingPorteirosCondo || !newPorteiroName.trim() || !newPorteiroEmail.trim()) return;
+
+    try {
+      const newPorteiro: User = {
+        id: `user-porteiro-${Date.now()}`,
+        name: newPorteiroName.trim(),
+        email: newPorteiroEmail.trim().toLowerCase(),
+        password: newPorteiroPassword.trim() || 'portaria123',
+        role: 'porteiro',
+        phone: '',
+        active: true,
+        condoId: viewingPorteirosCondo.id,
+        condoName: viewingPorteirosCondo.name,
+        shiftTurn: newPorteiroShift.trim() || '1º Turno (06h às 14h)',
+        permissions: {
+          canManageUsers: false,
+          canConfigCondo: false,
+          canDeleteRecords: false,
+          canViewReports: true,
+          canManageSettings: false,
+        },
+      };
+
+      storage.saveUser(newPorteiro);
+      refreshData();
+      setNewPorteiroName('');
+      setNewPorteiroEmail('');
+      setNewPorteiroPassword('portaria123');
+      setNewPorteiroShift('');
+      setIsAddingPorteiro(false);
+      triggerFeedback(`Porteiro ${newPorteiro.name} cadastrado com vínculo obrigatório ao condomínio "${viewingPorteirosCondo.name}".`);
+    } catch (err: any) {
+      triggerFeedback(err.message || 'Erro ao cadastrar porteiro', 'error');
+    }
+  };
+
+  // Delete Porteiro
+  const handleDeletePorteiro = (porteiroId: string, porteiroName: string) => {
+    storage.deleteUser(porteiroId);
+    refreshData();
+    triggerFeedback(`Porteiro ${porteiroName} excluído do sistema.`);
   };
 
   // Filtered condos
@@ -335,9 +402,6 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
               Gestão de Condomínios
             </h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Cadastre condomínios, crie o ADM Predial responsável e gerencie acessos, licenças e senhas.
-          </p>
         </div>
 
         <button
@@ -517,9 +581,18 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
                           </span>
                         )}
 
-                        <span className="text-sky-300 text-[11px] font-medium bg-sky-950/60 px-2 py-0.5 rounded border border-sky-900/60">
-                          {condoPorteiros.length} porteiro(s) cadastrado(s)
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setViewingPorteirosCondo(c);
+                            setIsAddingPorteiro(false);
+                          }}
+                          className="text-sky-300 hover:text-white text-[11px] font-medium bg-sky-950/60 hover:bg-sky-900/60 px-2.5 py-1 rounded-lg border border-sky-900/60 transition-colors flex items-center gap-1.5 cursor-pointer"
+                          title="Visualizar e gerenciar porteiros vinculados a este condomínio"
+                        >
+                          <Shield className="w-3 h-3 text-sky-400" />
+                          <span>{condoPorteiros.length} porteiro(s) vinculado(s)</span>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -660,14 +733,9 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
                     <div>
                       <label className="block text-slate-200 text-xs font-bold">
                         {condoWorkScale === '12x36'
-                          ? 'Horário de Entrada da Manhã (Diurno) *'
-                          : 'Horário de Entrada do 1º Turno (Manhã) *'}
+                          ? 'Horário de Entrada da Manhã (Diurno)'
+                          : 'Horário de Entrada do 1º Turno (Manhã)'}
                       </label>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {condoWorkScale === '12x36'
-                          ? 'Ao indicar a entrada diurna, o sistema carrega as 12h diurnas e 12h noturnas.'
-                          : 'Ao indicar a entrada do 1º turno, o sistema calcula e carrega os 3 turnos de 8h automaticamente.'}
-                      </p>
                     </div>
 
                     <div className="flex items-center gap-1.5 self-start sm:self-auto">
@@ -935,14 +1003,9 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
                     <div>
                       <label className="block text-slate-200 text-xs font-bold">
                         {condoWorkScale === '12x36'
-                          ? 'Horário de Entrada da Manhã (Diurno) *'
-                          : 'Horário de Entrada do 1º Turno (Manhã) *'}
+                          ? 'Horário de Entrada da Manhã (Diurno)'
+                          : 'Horário de Entrada do 1º Turno (Manhã)'}
                       </label>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {condoWorkScale === '12x36'
-                          ? 'Ao indicar a entrada diurna, o sistema carrega as 12h diurnas e 12h noturnas.'
-                          : 'Ao indicar a entrada do 1º turno, o sistema calcula e carrega os 3 turnos de 8h automaticamente.'}
-                      </p>
                     </div>
 
                     <div className="flex items-center gap-1.5 self-start sm:self-auto">
@@ -1127,51 +1190,78 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
         </div>
       )}
 
-      {/* MODAL: RECUPERAR / REDEFINIR SENHA DO ADM PREDIAL */}
-      {resetPasswordCondo && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <Key className="w-4 h-4 text-amber-400" />
-                <h3 className="text-sm font-bold text-white">Recuperar Senha do ADM</h3>
-              </div>
-              <button
-                onClick={() => setResetPasswordCondo(null)}
-                className="text-slate-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {/* MODAL: RECUPERAR / REDEFINIR SENHA (DEV MASTER) */}
+      {resetPasswordCondo && (() => {
+        const condoUsers = allUsers.filter(
+          (u) => u.condoId === resetPasswordCondo.id || (resetPasswordCondo.admPredial && u.email.toLowerCase() === resetPasswordCondo.admPredial.email.toLowerCase())
+        );
 
-            <div className="text-xs space-y-3">
-              <p className="text-slate-300">
-                Condomínio: <strong className="text-white">{resetPasswordCondo.name}</strong>
-              </p>
-              <p className="text-slate-300">
-                ADM Predial: <strong className="text-purple-300">{resetPasswordCondo.admPredial?.name}</strong> ({resetPasswordCondo.admPredial?.email})
-              </p>
-
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Senha do Administrador</label>
+        return (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={newPasswordInput}
-                    onChange={(e) => setNewPasswordInput(e.target.value)}
-                    className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-mono text-sm font-bold focus:outline-none focus:border-amber-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCopyPassword}
-                    className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 border border-slate-700"
-                    title="Copiar senha"
-                  >
-                    {copiedKey ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                    <span>{copiedKey ? 'Copiada' : 'Copiar'}</span>
-                  </button>
+                  <Key className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-sm font-bold text-white">Recuperar Senha de Usuários (Dev)</h3>
                 </div>
+                <button
+                  onClick={() => setResetPasswordCondo(null)}
+                  className="text-slate-400 hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
+
+              <div className="text-xs space-y-3">
+                <p className="text-slate-300">
+                  Condomínio: <strong className="text-white">{resetPasswordCondo.name}</strong>
+                </p>
+
+                {condoUsers.length > 0 && (
+                  <div>
+                    <label className="block text-slate-300 font-medium mb-1">Selecionar Usuário para Recuperação</label>
+                    <select
+                      value={selectedUserToReset?.id || ''}
+                      onChange={(e) => {
+                        const found = condoUsers.find((u) => u.id === e.target.value);
+                        if (found) {
+                          setSelectedUserToReset(found);
+                          setNewPasswordInput(found.password || 'senha123');
+                        }
+                      }}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                    >
+                      {condoUsers.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name} ({u.role === 'admin' ? 'ADM Predial' : 'Porteiro'})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">
+                    Senha de Acesso de {selectedUserToReset ? selectedUserToReset.name : 'Usuário'}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newPasswordInput}
+                      onChange={(e) => setNewPasswordInput(e.target.value)}
+                      className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-amber-300 font-mono text-sm font-bold focus:outline-none focus:border-amber-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleCopyPassword}
+                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1 border border-slate-700"
+                      title="Copiar senha"
+                    >
+                      {copiedKey ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                      <span>{copiedKey ? 'Copiada' : 'Copiar'}</span>
+                    </button>
+                  </div>
+                </div>
 
               <div className="flex items-center gap-2 pt-1">
                 <button
@@ -1202,40 +1292,237 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
             </div>
           </div>
         </div>
-      )}
+      );
+    })()}
 
-      {/* MODAL: EXCLUIR CONDOMÍNIO */}
-      {condoToDelete && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-rose-800/80 rounded-xl w-full max-w-sm overflow-hidden shadow-2xl p-5 space-y-4">
-            <div className="flex items-center gap-2.5 text-rose-400">
-              <AlertTriangle className="w-5 h-5 shrink-0" />
-              <h3 className="text-sm font-bold text-white">Excluir Condomínio</h3>
-            </div>
+      {/* MODAL: EXCLUIR CONDOMÍNIO (REVOGAÇÃO IMEDIATA DE PORTEIROS) */}
+      {condoToDelete && (() => {
+        const porteirosLinked = allUsers.filter((u) => u.role === 'porteiro' && u.condoId === condoToDelete.id);
+        return (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-rose-800/80 rounded-xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-4">
+              <div className="flex items-center gap-2.5 text-rose-400">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <h3 className="text-sm font-bold text-white">Excluir Condomínio</h3>
+              </div>
 
-            <p className="text-xs text-slate-300 leading-relaxed">
-              Tem certeza que deseja excluir o condomínio <strong className="text-white">"{condoToDelete.name}"</strong>? Esta ação removerá o condomínio e seus vínculos da plataforma.
-            </p>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Tem certeza que deseja excluir o condomínio <strong className="text-white">"{condoToDelete.name}"</strong>?
+              </p>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-              <button
-                type="button"
-                onClick={() => setCondoToDelete(null)}
-                className="px-3 py-1.5 text-slate-400 hover:text-white text-xs font-semibold"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition-all shadow-md"
-              >
-                Excluir Definitivamente
-              </button>
+              <p className="text-xs text-rose-400">
+                A exclusão removerá o condomínio e revogará imediatamente o acesso de {porteirosLinked.length} porteiro(s) vinculado(s).
+              </p>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setCondoToDelete(null)}
+                  className="px-3 py-1.5 text-slate-400 hover:text-white text-xs font-semibold cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer"
+                >
+                  Excluir Condomínio e Revogar Porteiros
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {/* MODAL: GERENCIAR PORTEIROS DO CONDOMÍNIO SELECIONADO */}
+      {viewingPorteirosCondo && (() => {
+        const porteirosOfThisCondo = allUsers.filter((u) => u.role === 'porteiro' && u.condoId === viewingPorteirosCondo.id);
+        const condoShifts = calculateShiftsForScale(viewingPorteirosCondo.workScale || '8h_3turnos', viewingPorteirosCondo.workScaleStartHour || '06:00');
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+              <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-sky-400" />
+                  <div>
+                    <h3 className="text-sm font-bold text-white">
+                      Porteiros Vinculados: {viewingPorteirosCondo.name}
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewingPorteirosCondo(null);
+                    setIsAddingPorteiro(false);
+                  }}
+                  className="text-slate-400 hover:text-white p-1 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-4 space-y-4 overflow-y-auto text-xs">
+                {/* List of Porteiros */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-200 text-xs">
+                      Porteiros Cadastrados ({porteirosOfThisCondo.length})
+                    </span>
+                    {!isAddingPorteiro && (
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingPorteiro(true)}
+                        className="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Novo Porteiro</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {porteirosOfThisCondo.length === 0 ? (
+                    <div className="p-6 text-center bg-slate-950 rounded-lg border border-slate-800">
+                      <p className="text-slate-400">Nenhum porteiro cadastrado neste condomínio.</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-800 bg-slate-950 rounded-xl border border-slate-800 overflow-hidden">
+                      {porteirosOfThisCondo.map((p) => (
+                        <div key={p.id} className="p-3 flex items-center justify-between gap-3 hover:bg-slate-900/50 transition-colors">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-white truncate">{p.name}</span>
+                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-semibold ${p.active ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-rose-950 text-rose-300 border border-rose-800'}`}>
+                                {p.active ? 'Ativo' : 'Bloqueado'}
+                              </span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400 mt-1">
+                              <span>E-mail: <strong className="text-slate-300 font-mono">{p.email}</strong></span>
+                              {p.shiftTurn && (
+                                <span className="text-sky-300 font-mono text-[10px]">
+                                  🕒 {p.shiftTurn}
+                                </span>
+                              )}
+                              <span>Senha: <strong className="text-amber-300 font-mono">{p.password || '••••••••'}</strong></span>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePorteiro(p.id, p.name)}
+                            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-950/60 rounded-lg border border-slate-800 hover:border-rose-800 transition-colors cursor-pointer"
+                            title="Excluir porteiro"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Inline form to add porteiro to this condo */}
+                {isAddingPorteiro && (
+                  <form onSubmit={handleCreatePorteiroForCondo} className="p-4 bg-slate-950 border border-sky-800/80 rounded-xl space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-semibold text-white text-xs">Novo Porteiro para {viewingPorteirosCondo.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingPorteiro(false)}
+                        className="text-slate-400 hover:text-white"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-300 font-medium mb-1">Nome Completo *</label>
+                        <input
+                          type="text"
+                          required
+                          value={newPorteiroName}
+                          onChange={(e) => setNewPorteiroName(e.target.value)}
+                          placeholder="Ex: Carlos Eduardo"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-300 font-medium mb-1">E-mail de Acesso *</label>
+                        <input
+                          type="email"
+                          required
+                          value={newPorteiroEmail}
+                          onChange={(e) => setNewPorteiroEmail(e.target.value)}
+                          placeholder="carlos.portaria@condominio.com"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-300 font-medium mb-1">Senha Inicial</label>
+                        <input
+                          type="text"
+                          value={newPorteiroPassword}
+                          onChange={(e) => setNewPorteiroPassword(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-300 font-medium mb-1">Turno de Trabalho</label>
+                        <select
+                          value={newPorteiroShift}
+                          onChange={(e) => setNewPorteiroShift(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
+                        >
+                          <option value="">Selecione o Turno</option>
+                          {condoShifts.map((s) => (
+                            <option key={s.id} value={s.label}>
+                              {s.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingPorteiro(false)}
+                        className="px-3 py-1.5 text-slate-400 hover:text-white text-xs font-semibold cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer"
+                      >
+                        Cadastrar Porteiro
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+
+              <div className="px-5 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewingPorteirosCondo(null);
+                    setIsAddingPorteiro(false);
+                  }}
+                  className="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Fechar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };

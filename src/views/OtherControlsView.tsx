@@ -162,9 +162,6 @@ export const OtherControlsView: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-slate-900 border border-slate-800 p-4 sm:p-5 rounded-xl">
         <div>
           <h2 className="text-lg font-bold text-white tracking-tight">Controles Complementares</h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Chaves, achados e perdidos, mudanças e reservas.
-          </p>
         </div>
 
         {/* Section Tabs */}
@@ -176,7 +173,7 @@ export const OtherControlsView: React.FC = () => {
             }`}
           >
             <Key className="w-3.5 h-3.5" />
-            <span>Chaves & Controles ({keys.filter((k) => k.status === 'retirado').length} fora)</span>
+            <span>Chaves ({keys.filter((k) => k.status === 'retirado').length} fora)</span>
           </button>
 
           <button
@@ -206,7 +203,7 @@ export const OtherControlsView: React.FC = () => {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-              Claviculário / Chaves e Controles
+              Chaves e Controles
             </h3>
             {isObserver ? (
               <span className="text-xs text-indigo-400 font-semibold flex items-center gap-1">
@@ -218,7 +215,7 @@ export const OtherControlsView: React.FC = () => {
                 className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Registrar Empréstimo</span>
+                <span>Emprestar Chave</span>
               </button>
             )}
           </div>

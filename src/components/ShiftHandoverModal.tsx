@@ -159,18 +159,18 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
   const handleFinishShift = () => {
     setValidationError(null);
 
-    const cleanNextName = nextOperatorName.trim();
-    if (!cleanNextName) {
-      setValidationError('Por favor, informe ou selecione o nome do próximo operador que assumirá o posto.');
-      return;
-    }
+    const cleanNextName =
+      nextOperatorName.trim() ||
+      selectedNextUser?.name ||
+      allUsers.find((u) => u.id !== currentUser.id && u.role === 'porteiro')?.name ||
+      'Próximo Plantonista';
 
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     const endedAt = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
-    // 1. Update and close the active shift in history (or create a completed entry for current operator)
+    // 1. Update and close the active shift in history
     const shifts = storage.getShiftEntries();
     const existingOpen = shifts.find((s) => !s.handoverCompleted);
 
@@ -213,7 +213,7 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
     );
 
     // 4. Ensure next operator exists as a valid user in storage
-    if (!selectedNextUser && cleanNextName) {
+    if (!selectedNextUser && cleanNextName && cleanNextName !== 'Próximo Plantonista') {
       const found = storage.getAllUsers().find(
         (u) => u.name.toLowerCase() === cleanNextName.toLowerCase()
       );
@@ -243,18 +243,19 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
 
     setSignedSuccess(true);
 
-    // Formalize handover: Log out current user and redirect to login screen for next operator
+    // Logout and redirect cleanly to login screen
     setTimeout(() => {
       setSignedSuccess(false);
-      storage.logout();
+      onClose();
       if (onLogoutRequested) {
         onLogoutRequested();
+      } else {
+        storage.logout();
       }
       if (onTurnoCompleted) {
         onTurnoCompleted();
       }
-      onClose();
-    }, 1200);
+    }, 800);
   };
 
   if (!isOpen) return null;
@@ -298,22 +299,16 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
             </div>
           )}
 
-          {/* CONTINUIDADE GARANTIDA: Resumo Operacional para o Próximo Turno */}
-          <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-emerald-800/50 rounded-xl p-4 space-y-3">
+          {/* CONTINUIDADE OPERACIONAL: Resumo do Posto para o Próximo Turno */}
+          <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border border-emerald-800/50 rounded-xl p-3.5 space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="font-bold text-white text-xs flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <span>Continuidade Operacional Garantida para o Próximo Turno</span>
-              </span>
-              <span className="text-[10px] text-emerald-400 font-mono font-semibold bg-emerald-950/80 border border-emerald-700/60 px-2.5 py-0.5 rounded shadow-sm">
-                100% Preservado
+                <span>Status do Posto</span>
               </span>
             </div>
-            <p className="text-[11px] text-slate-300 leading-relaxed">
-              Tudo o que aconteceu no seu turno permanece <strong>gravado e disponível</strong> para o próximo porteiro em todos os módulos do sistema:
-            </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono-tabular">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5 font-mono-tabular">
               <div className="bg-slate-950/80 border border-slate-800 rounded-lg p-2.5 text-center">
                 <Users className="w-4 h-4 text-sky-400 mx-auto mb-1" />
                 <span className="text-sm font-bold text-white block">{insideCount}</span>
@@ -413,13 +408,13 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
           <div>
             <label className="block text-xs font-bold text-slate-200 mb-1.5 flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Observações Gerais do Plantão para o Próximo Porteiro</span>
+              <span>Observações do Turno</span>
             </label>
             <textarea
               rows={3}
               value={generalNotes}
               onChange={(e) => setGeneralNotes(e.target.value)}
-              placeholder="Ex: Câmeras e portões 100% operantes, encomenda frágil da Torre B separada na prateleira 2, prestador de pintura liberado até as 17h..."
+              placeholder="Observações do plantão para o próximo operador..."
               className="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-emerald-500 transition-colors resize-none placeholder-slate-500 leading-relaxed"
             />
           </div>
@@ -427,8 +422,7 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
           {/* Próximo Porteiro Assumindo */}
           <div>
             <label className="block text-xs font-bold text-slate-200 mb-1.5 flex items-center justify-between">
-              <span>Próximo Porteiro / Operador que Assume o Posto *</span>
-              <span className="text-[10px] text-slate-400 font-normal">Selecione abaixo ou digite o nome</span>
+              <span>Próximo Porteiro *</span>
             </label>
 
             {allUsers.filter((u) => u.id !== currentUser.id && u.active).length > 0 && (
@@ -502,17 +496,6 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
                 </option>
               ))}
             </select>
-            <p className="text-[10px] text-slate-400">
-              Escala de trabalho: <strong>{condo.workScaleNotes || getWorkScaleSummary(condo.workScale || '8h_3turnos', condo.workScaleStartHour || '06:00')}</strong>
-            </p>
-          </div>
-
-          {/* Informação sobre encerramento de sessão */}
-          <div className="p-3 bg-amber-950/30 border border-amber-800/40 rounded-xl flex items-start gap-2.5 text-amber-200/90 text-xs">
-            <LogOut className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-            <p className="text-[11px] leading-relaxed">
-              Ao concluir a passagem, este plantão será gravado oficialmente no Livro de Ocorrências. Sua sessão será encerrada e o sistema irá para a tela de login para que o próximo operador entre com suas credenciais.
-            </p>
           </div>
         </div>
 

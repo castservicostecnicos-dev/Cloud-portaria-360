@@ -327,12 +327,9 @@ export const ApartmentsView: React.FC<ApartmentsViewProps> = ({
           <div className="flex items-center gap-2">
             <Building2 className="w-5 h-5 text-emerald-400" />
             <h2 className="text-lg font-bold text-white tracking-tight">
-              Ficha do Apartamento & Blocos
+              Apartamentos & Blocos
             </h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Consulta cadastral por apartamento, moradores, veículos e histórico.
-          </p>
         </div>
 
         {/* Block Selector & Block Actions */}

@@ -150,17 +150,14 @@ export const ResidentsView: React.FC<ResidentsViewProps> = ({ onTriggerWhatsApp 
         <div>
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-lg font-bold text-white tracking-tight">Moradores & Contatos</h2>
+            <h2 className="text-lg font-bold text-white tracking-tight">Moradores</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Consulta de moradores, contatos e autorizações.
-          </p>
         </div>
 
         {isObserver ? (
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-950/80 border border-emerald-700/60 text-emerald-300 rounded-lg text-xs font-semibold shrink-0">
             <Eye className="w-4 h-4 text-emerald-400" />
-            <span>Modo Observador (Visualização Síndico/ADM)</span>
+            <span>Modo Observador</span>
           </div>
         ) : (
           <button
@@ -168,7 +165,7 @@ export const ResidentsView: React.FC<ResidentsViewProps> = ({ onTriggerWhatsApp 
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-md transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span>Cadastrar Morador</span>
+            <span>Novo Morador</span>
           </button>
         )}
       </div>
@@ -179,7 +176,7 @@ export const ResidentsView: React.FC<ResidentsViewProps> = ({ onTriggerWhatsApp 
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Buscar por nome, CPF, telefone ou apartamento..."
+            placeholder="Buscar moradores..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"

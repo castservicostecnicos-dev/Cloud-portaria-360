@@ -108,15 +108,12 @@ export const ContractorsView: React.FC<ContractorsViewProps> = ({
             <Wrench className="w-5 h-5 text-teal-400" />
             <h2 className="text-lg font-bold text-white tracking-tight">Prestadores de Serviço</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Consulta e liberação de técnicos e prestadores autorizados.
-          </p>
         </div>
 
         {isObserver ? (
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-teal-950/80 border border-teal-700/60 text-teal-300 rounded-lg text-xs font-semibold shrink-0">
             <Eye className="w-4 h-4 text-teal-400" />
-            <span>Modo Observador (Visualização Síndico/ADM)</span>
+            <span>Modo Observador</span>
           </div>
         ) : (
           <button
@@ -124,7 +121,7 @@ export const ContractorsView: React.FC<ContractorsViewProps> = ({
             className="flex items-center gap-2 px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white rounded-lg text-xs font-semibold shadow-md transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span>Cadastrar Prestador</span>
+            <span>Novo Prestador</span>
           </button>
         )}
       </div>
@@ -135,7 +132,7 @@ export const ContractorsView: React.FC<ContractorsViewProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Pesquisar por nome do técnico, empresa, documento ou serviço..."
+            placeholder="Buscar prestadores..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-teal-500"

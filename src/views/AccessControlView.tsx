@@ -190,17 +190,14 @@ export const AccessControlView: React.FC<AccessControlViewProps> = ({ onTriggerW
         <div>
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-emerald-400" />
-            <h2 className="text-lg font-bold text-white tracking-tight">Controle de Acesso da Portaria</h2>
+            <h2 className="text-lg font-bold text-white tracking-tight">Controle de Acesso</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Registro e monitoramento de entradas e saídas em tempo real.
-          </p>
         </div>
 
         {isObserver ? (
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 rounded-lg text-xs font-semibold shrink-0">
             <Eye className="w-4 h-4 text-indigo-400" />
-            <span>Modo Observador (Visualização Síndico/ADM)</span>
+            <span>Modo Observador</span>
           </div>
         ) : (
           <button
@@ -208,7 +205,7 @@ export const AccessControlView: React.FC<AccessControlViewProps> = ({ onTriggerW
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-md transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span>Registrar Nova Entrada</span>
+            <span>Nova Entrada</span>
           </button>
         )}
       </div>
@@ -219,7 +216,7 @@ export const AccessControlView: React.FC<AccessControlViewProps> = ({ onTriggerW
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Pesquisar por nome, documento, placa ou apartamento..."
+            placeholder="Buscar por nome, documento, placa ou apartamento..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-emerald-500"

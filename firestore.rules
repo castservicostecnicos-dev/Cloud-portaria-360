@@ -12,44 +12,77 @@ service cloud.firestore {
 
     // Condo Configuration Collection
     match /condos/{condoId} {
-      allow read: if isValidId(condoId);
-      allow write: if isValidId(condoId);
+      allow read, write: if isValidId(condoId);
     }
 
     // Client Condos Multi-management
     match /client_condos/{clientCondoId} {
-      allow read: if isValidId(clientCondoId);
-      allow write: if isValidId(clientCondoId);
+      allow read, write: if isValidId(clientCondoId);
     }
 
     // Users and Operators
     match /users/{userId} {
-      allow read: if isValidId(userId);
-      allow write: if isValidId(userId);
+      allow read, write: if isValidId(userId);
     }
 
-    // Access Logs (Gatehouse entries and exits)
+    // Access Logs (Gatehouse entries and exits with 2-year retention)
     match /access_logs/{logId} {
-      allow read: if isValidId(logId);
-      allow write: if isValidId(logId);
+      allow read, write: if isValidId(logId);
     }
 
     // Deliveries and Packages
     match /deliveries/{deliveryId} {
-      allow read: if isValidId(deliveryId);
-      allow write: if isValidId(deliveryId);
+      allow read, write: if isValidId(deliveryId);
     }
 
-    // Occurrences & Shift Handover
+    // Vehicles of Residents and Visitors
+    match /vehicles/{vehicleId} {
+      allow read, write: if isValidId(vehicleId);
+    }
+
+    // Residents
+    match /residents/{residentId} {
+      allow read, write: if isValidId(residentId);
+    }
+
+    // Visitors
+    match /visitors/{visitorId} {
+      allow read, write: if isValidId(visitorId);
+    }
+
+    // Contractors / Service providers
+    match /contractors/{contractorId} {
+      allow read, write: if isValidId(contractorId);
+    }
+
+    // Occurrences
     match /occurrences/{occurrenceId} {
-      allow read: if isValidId(occurrenceId);
-      allow write: if isValidId(occurrenceId);
+      allow read, write: if isValidId(occurrenceId);
+    }
+
+    // Shift Handover Book Entries
+    match /shift_entries/{shiftId} {
+      allow read, write: if isValidId(shiftId);
     }
 
     // CCTV Cameras & DVR Channels
     match /cctv_cameras/{cameraId} {
-      allow read: if isValidId(cameraId);
-      allow write: if isValidId(cameraId);
+      allow read, write: if isValidId(cameraId);
+    }
+
+    // Apartments and Units
+    match /apartments/{apartmentId} {
+      allow read, write: if isValidId(apartmentId);
+    }
+
+    // Blocks and Towers
+    match /blocks/{blockId} {
+      allow read, write: if isValidId(blockId);
+    }
+
+    // Connection Health Check
+    match /test/{docId} {
+      allow read, write: if true;
     }
   }
 }

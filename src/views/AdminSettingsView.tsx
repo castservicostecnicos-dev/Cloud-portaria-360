@@ -22,6 +22,10 @@ import {
   ExternalLink,
   Layers,
   Server,
+  Flame,
+  Database,
+  CheckCircle2,
+  ShieldCheck,
 } from 'lucide-react';
 import { storage } from '../services/storage';
 import {
@@ -36,7 +40,7 @@ import {
 } from '../types';
 
 export const AdminSettingsView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'condo' | 'users' | 'templates' | 'logs' | 'backup' | 'cloudflare'>('condo');
+  const [activeTab, setActiveTab] = useState<'condo' | 'users' | 'templates' | 'logs' | 'backup' | 'cloudflare' | 'firebase'>('condo');
   const [currentUser, setCurrentUser] = useState<User>(storage.getCurrentUser());
   const [condo, setCondo] = useState<CondoConfig>(storage.getCondo());
   const [users, setUsers] = useState<User[]>(storage.getUsers());
@@ -44,6 +48,8 @@ export const AdminSettingsView: React.FC = () => {
   const [logs, setLogs] = useState<AuditLog[]>(storage.getAuditLogs());
   const [selectedCondoFilter, setSelectedCondoFilter] = useState<string>('all');
   const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
+  const [isCloudSyncing, setIsCloudSyncing] = useState(false);
+  const [cloudSyncStats, setCloudSyncStats] = useState<{ count?: number; message?: string } | null>(null);
   const clientCondos = storage.getClientCondos();
 
   // Editing state for users
@@ -93,6 +99,30 @@ export const AdminSettingsView: React.FC = () => {
   const showFeedback = (msg: string) => {
     setFeedbackMsg(msg);
     setTimeout(() => setFeedbackMsg(null), 3000);
+  };
+
+  const handleTriggerCloudSync = async () => {
+    setIsCloudSyncing(true);
+    try {
+      const res = await storage.pushAllLocalDataToFirestore();
+      setCloudSyncStats({ count: res.count, message: `${res.count} registros sincronizados no Firebase Firestore com sucesso!` });
+      showFeedback('Sincronização com Firebase concluída!');
+    } catch {
+      showFeedback('Erro na sincronização');
+    } finally {
+      setIsCloudSyncing(false);
+    }
+  };
+
+  const handleHydrateCloud = async () => {
+    setIsCloudSyncing(true);
+    try {
+      await storage.hydrateFromFirestore();
+      refreshData();
+      showFeedback('Dados atualizados da nuvem Firebase!');
+    } finally {
+      setIsCloudSyncing(false);
+    }
   };
 
   const handleSaveCondo = (e: React.FormEvent) => {
@@ -233,9 +263,6 @@ export const AdminSettingsView: React.FC = () => {
             <Settings className="w-5 h-5 text-emerald-400" />
             <h2 className="text-lg font-bold text-white tracking-tight">Administração & Configurações</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Cadastro de porteiros, dados do condomínio e configurações.
-          </p>
         </div>
 
         {/* Feedback pill */}
@@ -306,6 +333,16 @@ export const AdminSettingsView: React.FC = () => {
         >
           <Cloud className="w-3.5 h-3.5 text-orange-400" />
           <span>Cloudflare (Pages & Workers)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('firebase')}
+          className={`px-3 py-1.5 rounded-lg font-semibold transition-colors flex items-center gap-1.5 shrink-0 ${
+            activeTab === 'firebase' ? 'bg-amber-950/50 text-amber-300 border border-amber-600/50 shadow' : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <Flame className="w-3.5 h-3.5 text-amber-500" />
+          <span>Banco Cloud (Firebase)</span>
         </button>
       </div>
 
@@ -404,9 +441,6 @@ export const AdminSettingsView: React.FC = () => {
                   <Clock className="w-4 h-4 text-sky-400" />
                   <span>Escala de Trabalho Aplicada à Portaria</span>
                 </h4>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Define o modelo operacional de turnos para cadastro de porteiros e troca de plantão neste condomínio.
-                </p>
               </div>
               <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border self-start sm:self-auto ${
                 (condo.workScale || '8h_3turnos') === '12x36'
@@ -427,15 +461,10 @@ export const AdminSettingsView: React.FC = () => {
                     <Clock className="w-3.5 h-3.5 text-sky-400" />
                     <span>
                       {(condo.workScale || '8h_3turnos') === '12x36'
-                        ? 'Horário de Entrada da Manhã (Turno Diurno) *'
-                        : 'Horário de Entrada do 1º Turno (Manhã) *'}
+                        ? 'Horário de Entrada da Manhã (Turno Diurno)'
+                        : 'Horário de Entrada do 1º Turno (Manhã)'}
                     </span>
                   </label>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
-                    {(condo.workScale || '8h_3turnos') === '12x36'
-                      ? 'Ao indicar o horário de entrada diurno, o sistema calcula os plantões de 12h (diurno e noturno) automaticamente.'
-                      : 'Ao indicar o horário de entrada do 1º turno, o sistema calcula e carrega os 3 turnos de 8 horas automaticamente.'}
-                  </p>
                 </div>
 
                 <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -645,9 +674,6 @@ export const AdminSettingsView: React.FC = () => {
                   <span>Ícone Oficial CAST 360</span>
                   <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-1.5 py-0.5 rounded font-mono-tabular">PWA Ready</span>
                 </div>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Imagem aplicada como ícone nos formatos PWA (192px, 512px, Maskable), Apple Touch Icon (180px) e Favicon de navegador.
-                </p>
               </div>
             </div>
           </div>
@@ -677,11 +703,6 @@ export const AdminSettingsView: React.FC = () => {
                   {currentUser.role === 'dev' ? 'Modo Master Developer' : 'Gerenciado pelo ADM Predial'}
                 </span>
               </h3>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                {currentUser.role === 'dev'
-                  ? 'Visualização e auditoria de usuários da plataforma.'
-                  : `Equipe de porteiros e operadores de acesso do ${condo.name}.`}
-              </p>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
@@ -743,9 +764,6 @@ export const AdminSettingsView: React.FC = () => {
               <div className="p-8 text-center space-y-2">
                 <Users className="w-8 h-8 text-slate-600 mx-auto" />
                 <p className="text-sm font-semibold text-white">Nenhum operador ou porteiro cadastrado para este condomínio.</p>
-                <p className="text-xs text-slate-400 max-w-md mx-auto">
-                  Como ADM Predial do <strong className="text-slate-200">{condo.name}</strong>, utilize o botão acima para cadastrar a equipe de portaria exclusiva desta unidade.
-                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -782,8 +800,12 @@ export const AdminSettingsView: React.FC = () => {
                           </td>
                           {currentUser.role === 'dev' && (
                             <td className="py-3 px-4">
-                              <span className="text-[11px] text-indigo-300 font-medium bg-indigo-950/80 px-2 py-0.5 rounded border border-indigo-800/60">
-                                {u.condoName || 'Geral / Dev'}
+                              <span className={`text-[11px] font-medium px-2 py-0.5 rounded border ${
+                                isDev
+                                  ? 'text-purple-300 bg-purple-950/80 border-purple-800/60'
+                                  : 'text-indigo-300 bg-indigo-950/80 border-indigo-800/60'
+                              }`}>
+                                {isDev ? 'Independente (Sem cliente)' : u.condoName || 'Não vinculado'}
                               </span>
                             </td>
                           )}
@@ -805,9 +827,9 @@ export const AdminSettingsView: React.FC = () => {
                               </span>
                             )}
                           </td>
-                          <td className="py-3 px-4 font-mono text-[11px] text-slate-300">
+                          <td className="py-3 px-4 font-mono text-[11px] text-slate-400">
                             <span className="bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                              {u.password || '••••••••'}
+                              {currentUser.role === 'dev' ? u.password || '••••••••' : '••••••••'}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-[10px] space-x-1">
@@ -860,10 +882,6 @@ export const AdminSettingsView: React.FC = () => {
       {/* TAB 3: TEMPLATES WHATSAPP */}
       {activeTab === 'templates' && (
         <div className="space-y-4">
-          <p className="text-xs text-slate-400">
-            Configure os modelos padrão das mensagens disparadas pela portaria aos moradores. As tags entre colchetes como <code>[NOME]</code>, <code>[TIPO]</code>, <code>[APARTAMENTO]</code>, <code>[HORA]</code> e <code>[CONDOMINIO]</code> são preenchidas automaticamente.
-          </p>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {templates.map((tpl) => (
               <div
@@ -942,11 +960,8 @@ export const AdminSettingsView: React.FC = () => {
       {activeTab === 'backup' && (
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-6 text-xs">
           <div>
-            <h3 className="text-sm font-semibold text-white mb-1">Cópia de Segurança Completa (Backup JSON)</h3>
-            <p className="text-slate-400 leading-relaxed">
-              Exporte todos os cadastros, acessos, encomendas, moradores, veículos e logs para um arquivo seguro em formato JSON.
-            </p>
-            <div className="mt-3 flex items-center gap-3">
+            <h3 className="text-sm font-semibold text-white mb-3">Cópia de Segurança Completa (Backup JSON)</h3>
+            <div className="flex items-center gap-3">
               <button
                 onClick={handleExportBackup}
                 className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold shadow"
@@ -964,13 +979,10 @@ export const AdminSettingsView: React.FC = () => {
           </div>
 
           <div className="pt-4 border-t border-slate-800">
-            <h3 className="text-sm font-semibold text-rose-400 mb-1">Redefinição de Demonstração / Fábrica</h3>
-            <p className="text-slate-400 leading-relaxed">
-              Restaura todo o banco de dados para os registros de teste e demonstração do condomínio Solar das Palmeiras.
-            </p>
+            <h3 className="text-sm font-semibold text-rose-400 mb-3">Redefinição de Demonstração / Fábrica</h3>
             <button
               onClick={handleResetToFactory}
-              className="mt-3 px-4 py-2 bg-rose-950/40 hover:bg-rose-900 text-rose-300 border border-rose-800/80 rounded-lg font-semibold"
+              className="px-4 py-2 bg-rose-950/40 hover:bg-rose-900 text-rose-300 border border-rose-800/80 rounded-lg font-semibold"
             >
               Resetar Dados para Demonstração Inicial
             </button>
@@ -995,9 +1007,6 @@ export const AdminSettingsView: React.FC = () => {
                       100% Pronto
                     </span>
                   </div>
-                  <p className="text-slate-300 mt-1 max-w-2xl leading-relaxed">
-                    Arquitetura compatível com a rede global de borda (Edge) da Cloudflare. Sem servidores pesados, com 0ms de cold start, CDN global, HTTPS automático e suporte PWA offline.
-                  </p>
                 </div>
               </div>
 
@@ -1015,164 +1024,8 @@ export const AdminSettingsView: React.FC = () => {
             </div>
           </div>
 
-          {/* Comparativo de Caminhos: Pages vs Workers */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
-            <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              <Layers className="w-4 h-4 text-orange-400" />
-              <span>Por qual caminho seguir: Cloudflare Pages ou Workers?</span>
-            </h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Option 1: Pages (Recomendado) */}
-              <div className="bg-slate-950 border-2 border-orange-500/60 rounded-xl p-4 relative space-y-3 shadow-lg">
-                <div className="flex items-center justify-between">
-                  <span className="px-2.5 py-0.5 rounded-md bg-orange-500 text-slate-950 font-black text-[10px] uppercase tracking-wider">
-                    Recomendado ⭐
-                  </span>
-                  <span className="text-xs text-orange-400 font-bold">Mais Simples & Completo</span>
-                </div>
-
-                <div>
-                  <h5 className="text-sm font-bold text-white">Cloudflare Pages (com Pages Functions)</h5>
-                  <p className="text-slate-400 text-[11px] mt-1 leading-relaxed">
-                    A plataforma nativa da Cloudflare feita sob medida para SPAs (React + Vite) com back-end serverless integrado.
-                  </p>
-                </div>
-
-                <ul className="space-y-1.5 text-slate-300 text-[11px]">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span><strong>Deploy contínuo via Git:</strong> Conecta ao GitHub com 1 clique.</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span><strong>Functions automáticas:</strong> Roteamento de <code className="text-orange-300">/functions/api/*</code> sem configurar servidores.</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span><strong>Roteamento SPA:</strong> Suporte nativo a <code className="text-orange-300">_redirects</code> para evitar erro 404 ao atualizar.</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                    <span><strong>Preview Deploys:</strong> Gera links temporários para cada Pull Request.</span>
-                  </li>
-                </ul>
-
-                <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 font-mono">
-                  Build command: <span className="text-white">npm run build</span> | Output: <span className="text-white">dist</span>
-                </div>
-              </div>
-
-              {/* Option 2: Workers */}
-              <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 font-semibold text-[10px] uppercase">
-                    Alternativa
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium">Workers with Assets</span>
-                </div>
-
-                <div>
-                  <h5 className="text-sm font-bold text-slate-200">Cloudflare Workers Puro</h5>
-                  <p className="text-slate-400 text-[11px] mt-1 leading-relaxed">
-                    Ideal para quem já possui pipeline com Wrangler CLI e deseja executar tudo dentro de um único arquivo de Worker.
-                  </p>
-                </div>
-
-                <ul className="space-y-1.5 text-slate-300 text-[11px]">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                    <span>Ponto de entrada configurado em <code className="text-slate-300">src/worker.ts</code>.</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                    <span>Assets vinculados em <code className="text-slate-300">wrangler.toml</code>.</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                    <span>Deploy direto pelo terminal com <code className="text-slate-300">npm run deploy:workers</code>.</span>
-                  </li>
-                </ul>
-
-                <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-400 font-mono">
-                  Comando: <span className="text-white">npx wrangler deploy</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Arquivos Organizados no Projeto */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
-            <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              <Globe className="w-4 h-4 text-emerald-400" />
-              <span>Estrutura de Arquivos Preparada no Projeto</span>
-            </h4>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
-                <div className="flex items-center gap-2 text-emerald-400 font-mono font-semibold">
-                  <Check className="w-4 h-4" />
-                  <span>functions/api/cctv/</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Endpoints serverless no Edge para proxy e teste de câmeras e DVRs (Intelbras/Hikvision).
-                </p>
-              </div>
-
-              <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
-                <div className="flex items-center gap-2 text-emerald-400 font-mono font-semibold">
-                  <Check className="w-4 h-4" />
-                  <span>public/_redirects</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Regras de Single Page Application: recarrega qualquer página sem retornar erro 404.
-                </p>
-              </div>
-
-              <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
-                <div className="flex items-center gap-2 text-emerald-400 font-mono font-semibold">
-                  <Check className="w-4 h-4" />
-                  <span>public/_headers</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Políticas de segurança, permissão de câmera do navegador e cache do PWA offline.
-                </p>
-              </div>
-
-              <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
-                <div className="flex items-center gap-2 text-emerald-400 font-mono font-semibold">
-                  <Check className="w-4 h-4" />
-                  <span>wrangler.toml</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Configuração oficial do Cloudflare Pages com <code className="text-orange-300">pages_build_output_dir = "dist"</code>.
-                </p>
-              </div>
-
-              <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
-                <div className="flex items-center gap-2 text-emerald-400 font-mono font-semibold">
-                  <Check className="w-4 h-4" />
-                  <span>package-lock.json</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Instalação estável e determinística com Node.js 22 e npm ci.
-                </p>
-              </div>
-
-              <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
-                <div className="flex items-center gap-2 text-emerald-400 font-mono font-semibold">
-                  <Check className="w-4 h-4" />
-                  <span>CLOUDFLARE_DEPLOY.md</span>
-                </div>
-                <p className="text-[11px] text-slate-400 mt-1">
-                  Documentação completa em português com tutorial passo a passo e dicas de rede.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Comandos de Terminal Prontos */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+          {/* Comandos de Terminal */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 space-y-3">
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
               <Terminal className="w-4 h-4 text-sky-400" />
               <span>Comandos de Build e Deploy</span>
@@ -1181,15 +1034,15 @@ export const AdminSettingsView: React.FC = () => {
             <div className="space-y-2">
               {[
                 {
-                  label: 'Compilar Projeto para Produção (Vite + PWA)',
+                  label: 'Build de Produção',
                   cmd: 'npm run build',
                 },
                 {
-                  label: 'Deploy Direto no Cloudflare Pages (Terminal)',
+                  label: 'Deploy Cloudflare Pages',
                   cmd: 'npm run deploy:pages',
                 },
                 {
-                  label: 'Deploy no Cloudflare Workers (Alternativa)',
+                  label: 'Deploy Cloudflare Workers',
                   cmd: 'npm run deploy:workers',
                 },
               ].map((item, idx) => (
@@ -1212,37 +1065,102 @@ export const AdminSettingsView: React.FC = () => {
               ))}
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Informações sobre DVR e CFTV */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
-            <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              <Server className="w-4 h-4 text-purple-400" />
-              <span>Como conectar o DVR Intelbras/Hikvision na Nuvem Cloudflare</span>
-            </h4>
-            <div className="text-slate-300 text-[11px] space-y-2 leading-relaxed">
-              <p>
-                Como o aplicativo roda sob <strong>HTTPS na nuvem</strong>, os navegadores impedem conexões diretas HTTP para a rede local da guarita (erro de Mixed Content). Nossa função de borda (<code className="text-orange-300">/api/cctv/snapshot</code>) atua como proxy seguro com autenticação Digest.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
-                  <span className="font-bold text-emerald-400 block mb-1">1. Cloudflare Tunnel (Recomendado)</span>
-                  <p className="text-slate-400">
-                    Instale o utilitário gratuito <code className="text-slate-200">cloudflared</code> no PC da guarita. Ele cria um túnel direto para o DVR sem precisar abrir portas no modem.
-                  </p>
-                </div>
-                <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
-                  <span className="font-bold text-sky-400 block mb-1">2. Intelbras DDNS + NAT</span>
-                  <p className="text-slate-400">
-                    Ative o DDNS no menu do DVR e direcione a porta HTTP (ex: 8080) no roteador da guarita para o IP do DVR.
-                  </p>
-                </div>
-                <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg">
-                  <span className="font-bold text-purple-400 block mb-1">3. Webcam USB Local</span>
-                  <p className="text-slate-400">
-                    Conecte qualquer câmera USB ao computador da portaria e clique em "Ativar Vídeo" na aba CFTV, sem precisar de internet externa.
-                  </p>
-                </div>
+      {/* TAB: BANCO CLOUD (FIREBASE) */}
+      {activeTab === 'firebase' && (
+        <div className="space-y-4">
+          {/* Cloud Status Card */}
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-950/80 border border-amber-600/50 flex items-center justify-center shrink-0 shadow-lg shadow-amber-950/40">
+                <Flame className="w-5 h-5 text-amber-400" />
               </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-sm font-bold text-white">Banco de Dados Firebase Firestore</h4>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                    Ativo & Conectado
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  ID: <span className="text-slate-200 font-mono font-bold">ai-studio-cloudflareportar-c8712ebc-837b-4a9f-b5d9-94c7ca2b9502</span> • Projeto: <span className="text-slate-200 font-mono">mega-alpha-djkjx</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
+              <button
+                onClick={handleHydrateCloud}
+                disabled={isCloudSyncing}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-700"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isCloudSyncing ? 'animate-spin' : ''}`} />
+                <span>Atualizar da Nuvem</span>
+              </button>
+
+              <button
+                onClick={handleTriggerCloudSync}
+                disabled={isCloudSyncing}
+                className="px-4 py-2 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                <span>{isCloudSyncing ? 'Sincronizando...' : 'Sincronizar Tudo no Firebase'}</span>
+              </button>
+            </div>
+          </div>
+
+          {cloudSyncStats && (
+            <div className="p-3 rounded-xl bg-emerald-950/80 border border-emerald-700/80 text-emerald-200 text-xs flex items-center justify-between">
+              <span>{cloudSyncStats.message}</span>
+              <button onClick={() => setCloudSyncStats(null)} className="p-1 hover:text-white">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Retention & Independence Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1.5">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                Retenção Mínima Garantida: 2 Anos
+              </span>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Todos os registros de controle de acesso (entradas e saídas de pessoas), veículos, encomendas e ocorrências possuem garantia de armazenamento permanente em nuvem pelo período legal mínimo de 24 meses.
+              </p>
+            </div>
+
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-1.5">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Database className="w-4 h-4 text-sky-400" />
+                Banco de Dados Independente
+              </span>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Instância dedicada e isolada na nuvem Google Cloud / Firebase. Opera com independência total de instâncias anteriores ou do ambiente gerador, prevenindo conflitos entre diferentes condomínios.
+              </p>
+            </div>
+          </div>
+
+          {/* Sync Metrics */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3">
+              <span className="text-[11px] text-slate-400 block">Entradas / Acessos</span>
+              <span className="text-lg font-bold text-white font-mono">{storage.getAccessLogs().length}</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3">
+              <span className="text-[11px] text-slate-400 block">Veículos Cadastrados</span>
+              <span className="text-lg font-bold text-sky-400 font-mono">{storage.getVehicles().length}</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3">
+              <span className="text-[11px] text-slate-400 block">Encomendas</span>
+              <span className="text-lg font-bold text-amber-400 font-mono">{storage.getDeliveries().length}</span>
+            </div>
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-3">
+              <span className="text-[11px] text-slate-400 block">Moradores / Usuários</span>
+              <span className="text-lg font-bold text-emerald-400 font-mono">{storage.getResidents().length + storage.getAllUsers().length}</span>
             </div>
           </div>
         </div>
@@ -1259,12 +1177,22 @@ export const AdminSettingsView: React.FC = () => {
               {editingUser ? 'Editar Usuário do Sistema' : 'Novo Usuário do Sistema'}
             </h3>
 
-            <div className="p-2.5 rounded-lg bg-slate-950 border border-emerald-900/40 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400">Condomínio Vinculado:</span>
-              <span className="font-semibold text-emerald-400 truncate ml-2">
-                {editingUser?.condoName || condo.name}
-              </span>
-            </div>
+            {userRole === 'dev' || userEmail.trim().toLowerCase() === 'ale11062@gmail.com' ? (
+              <div className="p-2.5 rounded-lg bg-purple-950/40 border border-purple-900/60 flex items-center justify-between text-[11px]">
+                <span className="text-purple-300 font-semibold flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5 text-purple-400" />
+                  Dev Master Independente
+                </span>
+                <span className="text-slate-400">Sem vínculo com cliente</span>
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-lg bg-slate-950 border border-emerald-900/40 flex items-center justify-between text-[11px]">
+                <span className="text-slate-400">Condomínio Vinculado:</span>
+                <span className="font-semibold text-emerald-400 truncate ml-2">
+                  {editingUser?.condoName || condo.name}
+                </span>
+              </div>
+            )}
 
             <div>
               <label className="block text-slate-300 font-medium mb-1">Nome Completo *</label>
@@ -1353,25 +1281,25 @@ export const AdminSettingsView: React.FC = () => {
                     </option>
                   ))}
                 </select>
-                <p className="text-[10px] text-slate-400">
-                  O porteiro assumirá a portaria nos relatórios e passagens de plantão de acordo com este turno.
-                </p>
               </div>
             )}
 
-            <div>
-              <label className="block text-slate-300 font-medium mb-1">Senha de Acesso ao Sistema</label>
-              <input
-                type="text"
-                placeholder="Defina a senha do operador ou deixe a atual"
-                value={userPassword}
-                onChange={(e) => setUserPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono"
-              />
-              <span className="text-[10px] text-slate-500 mt-0.5 block">
-                Permite autenticação via tela de login ou recuperação de senha.
-              </span>
-            </div>
+            {currentUser.role === 'dev' ? (
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Senha de Acesso</label>
+                <input
+                  type="text"
+                  placeholder="Defina a senha"
+                  value={userPassword}
+                  onChange={(e) => setUserPassword(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono"
+                />
+              </div>
+            ) : (
+              <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 text-xs">
+                As credenciais de acesso são gerenciadas e recuperadas pelo Dev Master.
+              </div>
+            )}
 
             {/* Individual Permissions */}
             <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg space-y-2">

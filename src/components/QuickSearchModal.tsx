@@ -201,7 +201,7 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({
               setQuery(e.target.value);
               performSearch(e.target.value);
             }}
-            placeholder="Digite nome, CPF, apartamento (ex: 101), placa de carro, código de encomenda..."
+            placeholder="Buscar morador, apartamento, placa, encomenda..."
             className="w-full bg-transparent text-sm text-white placeholder-slate-500 focus:outline-none"
           />
           {query && (
@@ -227,10 +227,7 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({
         <div className="max-h-96 overflow-y-auto p-2 divide-y divide-slate-800/60">
           {results.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs">
-              Nenhum registro encontrado para "<span className="text-white font-medium">{query}</span>".
-              <p className="mt-1 text-slate-500">
-                Tente pesquisar por número de apartamento (ex: 101, 201), placa veicular ou sobrenome.
-              </p>
+              Nenhum resultado encontrado{query ? ` para "${query}"` : ''}.
             </div>
           ) : (
             results.map((item) => {
@@ -273,12 +270,9 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({
           )}
         </div>
 
-        {/* Modal Footer Key tips */}
-        <div className="px-4 py-2 border-t border-slate-800 bg-slate-950 text-[11px] text-slate-500 flex items-center justify-between">
-          <span>Pesquisa instantânea em tempo real</span>
-          <div className="flex items-center gap-3">
-            <span>ESC para fechar</span>
-          </div>
+        {/* Modal Footer */}
+        <div className="px-4 py-2 border-t border-slate-800 bg-slate-950 text-[11px] text-slate-500 flex items-center justify-end">
+          <span>ESC para fechar</span>
         </div>
       </div>
     </div>

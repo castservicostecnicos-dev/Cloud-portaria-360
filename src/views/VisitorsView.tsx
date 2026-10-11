@@ -113,17 +113,14 @@ export const VisitorsView: React.FC<VisitorsViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <UserPlus className="w-5 h-5 text-purple-400" />
-            <h2 className="text-lg font-bold text-white tracking-tight">Visitantes & Autorizações</h2>
+            <h2 className="text-lg font-bold text-white tracking-tight">Visitantes</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Consulta e liberação de visitas pré-autorizadas.
-          </p>
         </div>
 
         {isObserver ? (
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-950/80 border border-purple-700/60 text-purple-300 rounded-lg text-xs font-semibold shrink-0">
             <Eye className="w-4 h-4 text-purple-400" />
-            <span>Modo Observador (Visualização Síndico/ADM)</span>
+            <span>Modo Observador</span>
           </div>
         ) : (
           <button
@@ -131,7 +128,7 @@ export const VisitorsView: React.FC<VisitorsViewProps> = ({
             className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-xs font-semibold shadow-md transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span>Cadastrar Visitante</span>
+            <span>Novo Visitante</span>
           </button>
         )}
       </div>
@@ -142,7 +139,7 @@ export const VisitorsView: React.FC<VisitorsViewProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Pesquisar visitante por nome, documento ou apartamento..."
+            placeholder="Buscar visitantes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-purple-500"

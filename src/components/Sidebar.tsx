@@ -80,11 +80,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
     userRole === 'dev'
       ? [
           {
-            label: 'Funções DEV',
+            label: 'DEV Master',
             items: [
               {
                 id: 'dev_master' as ActiveTab,
-                label: 'Gestão de Condomínios',
+                label: 'Condomínios',
                 icon: Building2,
                 badge: 'DEV',
                 badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
@@ -94,9 +94,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         ]
       : [
           {
-            label: 'Operação Principal',
+            label: 'Operação',
             items: [
-              { id: 'dashboard' as ActiveTab, label: 'Painel da Portaria', icon: LayoutDashboard },
+              { id: 'dashboard' as ActiveTab, label: 'Painel Geral', icon: LayoutDashboard },
               {
                 id: 'access' as ActiveTab,
                 label: 'Controle de Acesso',
@@ -108,44 +108,44 @@ export const Sidebar: React.FC<SidebarProps> = ({
             ],
           },
           {
-            label: 'Fluxo Diário & Comunicação',
+            label: 'Atendimento',
             items: [
               {
                 id: 'deliveries' as ActiveTab,
-                label: 'Encomendas & WhatsApp',
+                label: 'Encomendas',
                 icon: Package,
                 badge: pendingDeliveriesCount > 0 ? String(pendingDeliveriesCount) : undefined,
                 badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-600/30',
               },
-              { id: 'notices' as ActiveTab, label: 'Mural de Avisos & Envios', icon: Megaphone },
-              { id: 'visitors' as ActiveTab, label: 'Visitantes & Autorizações', icon: UserPlus },
-              { id: 'contractors' as ActiveTab, label: 'Prestadores de Serviço', icon: Wrench },
+              { id: 'notices' as ActiveTab, label: 'Mural de Avisos', icon: Megaphone },
+              { id: 'visitors' as ActiveTab, label: 'Visitantes', icon: UserPlus },
+              { id: 'contractors' as ActiveTab, label: 'Prestadores', icon: Wrench },
               { id: 'public_agents' as ActiveTab, label: 'Agentes Públicos', icon: BadgeCheck },
-              { id: 'vehicles' as ActiveTab, label: 'Veículos & Garagem', icon: Car },
+              { id: 'vehicles' as ActiveTab, label: 'Veículos', icon: Car },
             ],
           },
           {
-            label: 'Cadastros & Ocorrências',
+            label: 'Cadastros',
             items: [
-              { id: 'apartments' as ActiveTab, label: 'Ficha do Apartamento', icon: Building2 },
+              { id: 'apartments' as ActiveTab, label: 'Apartamentos', icon: Building2 },
               { id: 'residents' as ActiveTab, label: 'Moradores', icon: Users },
               {
                 id: 'occurrences' as ActiveTab,
-                label: 'Livro de Ocorrências',
+                label: 'Ocorrências',
                 icon: AlertTriangle,
                 badge: openOccurrencesCount > 0 ? String(openOccurrencesCount) : undefined,
                 badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-600/30',
               },
-              { id: 'other_controls' as ActiveTab, label: 'Chaves, Achados & Mudanças', icon: Key },
+              { id: 'other_controls' as ActiveTab, label: 'Outros Controles', icon: Key },
             ],
           },
           {
-            label: 'Gerenciamento',
+            label: 'Gestão',
             items: [
-              { id: 'reports' as ActiveTab, label: 'Relatórios & Exportação', icon: BarChart3 },
+              { id: 'reports' as ActiveTab, label: 'Relatórios', icon: BarChart3 },
               {
                 id: 'admin' as ActiveTab,
-                label: userRole === 'admin' ? 'Cadastrar Porteiros & Prédio' : 'Condomínio & Usuários',
+                label: userRole === 'admin' ? 'Porteiros & Prédio' : 'Configurações',
                 icon: Settings,
                 badge: userRole === 'admin' ? 'ADM' : undefined,
                 badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
@@ -260,7 +260,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </span>
               <span className="text-[10px] text-slate-400 block truncate capitalize">
                 {currentUser.role === 'dev'
-                  ? 'Dev Master'
+                  ? 'Dev Master (Independente)'
                   : currentUser.role === 'admin'
                   ? `ADM Predial (Observador) · ${condo.name}`
                   : `${currentUser.role} · ${condo.name}`}
@@ -301,13 +301,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Footer info */}
         <div className="p-2.5 border-t border-slate-800 bg-slate-950/90 text-[10px] text-slate-400 flex items-center justify-between">
-          <div className="truncate">
-            <span className="text-slate-300 font-medium block truncate">Portaria CAST 360</span>
-            <span className="text-emerald-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block" />
-              Posto de Atendimento Ativo
-            </span>
-          </div>
+          <span className="text-slate-400 font-medium truncate">CAST 360</span>
           <span className="text-[10px] font-mono text-slate-500">v2.5</span>
         </div>
       </aside>

@@ -167,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="h-4 w-px bg-slate-800" />
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-            <span className="text-purple-200 font-medium">Gestão Central de Condomínios</span>
+            <span className="text-purple-200 font-medium">DEV Master</span>
           </div>
         </div>
       ) : (
@@ -218,15 +218,17 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* Turn Handover Button */}
-        <button
-          onClick={onOpenShiftHandover}
-          className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-amber-200 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-lg transition-colors cursor-pointer"
-          title="Passagem de Turno e Livro de Plantão"
-        >
-          <Clock className="w-3.5 h-3.5 text-amber-400" />
-          <span className="whitespace-nowrap">Passagem de Turno</span>
-        </button>
+        {/* Turn Handover Button (Apenas Portaria / Operadores - Dev Master não faz turno) */}
+        {currentUser.role !== 'dev' && (
+          <button
+            onClick={onOpenShiftHandover}
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-amber-200 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-lg transition-colors cursor-pointer"
+            title="Passagem de Turno e Livro de Plantão"
+          >
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <span className="whitespace-nowrap">Passagem de Turno</span>
+          </button>
+        )}
 
         {/* User Profile & Auth Button */}
         <div className="relative">
@@ -254,7 +256,10 @@ export const Header: React.FC<HeaderProps> = ({
                 className="fixed inset-0 z-40 bg-black/30 sm:bg-transparent"
                 onClick={() => setShowUserDropdown(false)}
               />
-              <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div 
+                className="absolute right-0 mt-2 w-72 sm:w-80 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-150"
+                onClick={(e) => e.stopPropagation()}
+              >
               {/* Header */}
               <div className="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -296,13 +301,20 @@ export const Header: React.FC<HeaderProps> = ({
                           <span>{currentUser.phone}</span>
                         </p>
                       )}
-                      <p className="flex items-center gap-1.5 text-slate-300 font-medium truncate">
-                        <Building2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                        <span className="truncate">{currentUser.condoName || condo.name}</span>
-                      </p>
+                      {currentUser.role === 'dev' ? (
+                        <p className="flex items-center gap-1.5 text-purple-300 font-medium truncate">
+                          <Shield className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                          <span className="truncate">Dev Master</span>
+                        </p>
+                      ) : (
+                        <p className="flex items-center gap-1.5 text-slate-300 font-medium truncate">
+                          <Building2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span className="truncate">{currentUser.condoName || condo.name}</span>
+                        </p>
+                      )}
                       {currentUser.role === 'porteiro' && currentUser.shiftTurn && (
                         <p className="flex items-center gap-1.5 text-sky-300 font-mono text-[10px] bg-sky-950/60 p-1.5 rounded border border-sky-900/60 mt-1">
-                          <Clock className="w-3 h-3 text-sky-400 shrink-0" />
+                          <Clock className="w-3.5 h-3.5 text-sky-400 shrink-0" />
                           <span className="truncate">{currentUser.shiftTurn}</span>
                         </p>
                       )}
@@ -313,21 +325,27 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Actions Footer */}
               <div className="p-3 bg-slate-950 space-y-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowUserDropdown(false);
-                    onOpenShiftHandover();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-xl transition-all cursor-pointer"
-                >
-                  <Clock className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Passagem de Turno da Portaria</span>
-                </button>
+                {currentUser.role !== 'dev' && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowUserDropdown(false);
+                      if (onOpenShiftHandover) {
+                        onOpenShiftHandover();
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-semibold text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-xl transition-all cursor-pointer"
+                  >
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Passagem de Turno</span>
+                  </button>
+                )}
 
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.stopPropagation();
                     setShowUserDropdown(false);
                     onLogout();
                   }}

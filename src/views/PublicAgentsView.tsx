@@ -128,17 +128,14 @@ export const PublicAgentsView: React.FC = () => {
         <div>
           <div className="flex items-center gap-2">
             <BadgeCheck className="w-5 h-5 text-amber-400" />
-            <h2 className="text-lg font-bold text-white tracking-tight">Agentes Públicos & Órgãos</h2>
+            <h2 className="text-lg font-bold text-white tracking-tight">Agentes Públicos</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Registro e acompanhamento de autoridades, policiais e fiscais.
-          </p>
         </div>
 
         {isObserver ? (
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-950/80 border border-amber-700/60 text-amber-300 rounded-lg text-xs font-semibold shrink-0">
             <Eye className="w-4 h-4 text-amber-400" />
-            <span>Modo Observador (Visualização Síndico/ADM)</span>
+            <span>Modo Observador</span>
           </div>
         ) : (
           <button
@@ -146,18 +143,18 @@ export const PublicAgentsView: React.FC = () => {
             className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold shadow-md transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span>Registrar Agente Público</span>
+            <span>Novo Agente</span>
           </button>
         )}
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* Filter Bar */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col md:flex-row items-stretch md:items-center gap-3">
         <div className="relative flex-1">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Pesquisar por nome, matrícula, viatura ou finalidade..."
+            placeholder="Buscar agentes..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500"

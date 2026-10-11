@@ -152,12 +152,9 @@ export const NoticesView: React.FC = () => {
           <div className="flex items-center gap-2">
             <Megaphone className="w-5 h-5 text-emerald-400" />
             <h2 className="text-lg font-bold text-white tracking-tight">
-              Mural de Avisos & Comunicados
+              Mural de Avisos
             </h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Avisos gerais, comunicados e convocações para moradores.
-          </p>
         </div>
 
         <div className="flex items-center gap-2">

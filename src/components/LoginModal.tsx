@@ -33,7 +33,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [mode, setMode] = useState<'login' | 'recover'>('login');
-  const [recoveredPass, setRecoveredPass] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -57,26 +56,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       }, 500);
     } else {
       setErrorMsg(result.message || 'E-mail ou senha incorretos.');
-    }
-  };
-
-  const handleRecover = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    setRecoveredPass(null);
-
-    const cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail) {
-      setErrorMsg('Informe o e-mail cadastrado para recuperar a senha.');
-      return;
-    }
-
-    const result = storage.recoverPassword(cleanEmail);
-    if (result.success) {
-      setSuccessMsg(result.message);
-      setRecoveredPass(result.recoveredPassword || null);
-    } else {
-      setErrorMsg(result.message);
     }
   };
 
@@ -123,25 +102,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           <div className="p-3 rounded-lg bg-emerald-950/70 border border-emerald-800 text-emerald-200 text-xs flex items-center gap-2 animate-in fade-in duration-150">
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>{successMsg}</span>
-          </div>
-        )}
-
-        {recoveredPass && (
-          <div className="p-3 rounded-lg bg-slate-950 border border-emerald-500/60 text-xs space-y-1.5">
-            <span className="text-slate-400 block text-[11px]">Sua senha cadastrada:</span>
-            <div className="font-mono text-emerald-400 font-bold text-sm bg-slate-900 px-3 py-2 rounded border border-slate-800 flex items-center justify-between">
-              <span>{recoveredPass}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setPassword(recoveredPass);
-                  setMode('login');
-                }}
-                className="text-[11px] text-indigo-400 hover:text-indigo-300 font-sans hover:underline cursor-pointer"
-              >
-                Preencher no Login
-              </button>
-            </div>
           </div>
         )}
 
@@ -213,63 +173,33 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </div>
           </form>
         ) : (
-          <form onSubmit={handleRecover} className="space-y-4">
-            <p className="text-xs text-slate-400 leading-relaxed">
-              Digite o e-mail cadastrado na portaria para recuperar sua senha de acesso.
-            </p>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center gap-1.5">
-                <Mail className="w-3.5 h-3.5 text-slate-400" />
-                <span>E-mail Cadastrado</span>
-              </label>
-              <input
-                type="email"
-                required
-                placeholder="seu.email@exemplo.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
-              />
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-xs space-y-1.5">
+              <span className="font-bold text-white block">Recuperação de Senha</span>
+              <p className="text-slate-400">
+                Gerenciada exclusivamente pelo Administrador Dev Master.
+              </p>
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('login');
-                  setErrorMsg(null);
-                  setSuccessMsg(null);
-                }}
-                className="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium rounded-lg transition-colors cursor-pointer"
-              >
-                Voltar ao Login
-              </button>
-
-              <button
-                type="submit"
-                className="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Recuperar Senha</span>
-              </button>
-            </div>
-          </form>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('login');
+                setErrorMsg(null);
+                setSuccessMsg(null);
+              }}
+              className="w-full py-2.5 px-4 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+            >
+              Voltar ao Login
+            </button>
+          </div>
         )}
 
-        <div className="pt-3 border-t border-slate-800/80 text-center space-y-2">
+        <div className="pt-3 border-t border-slate-800/80 text-center">
           <p className="text-[10px] text-slate-500 flex items-center justify-center gap-1">
             <Shield className="w-3 h-3 text-emerald-400" />
-            <span>Sistema Seguro de Portaria Condominial · Portaria360</span>
+            <span>Portaria360</span>
           </p>
-          <div className="text-[10px] text-slate-400 bg-slate-950/80 p-2.5 rounded-lg border border-slate-800 text-left space-y-1">
-            <span className="font-semibold text-slate-300 block">Credenciais cadastradas na portaria:</span>
-            <div className="font-mono text-[10px] space-y-0.5 text-slate-400">
-              <p>• Porteiro Manhã: <strong className="text-slate-200">joao.portaria@solardaspalmeiras.com.br</strong> | Senha: <span className="text-emerald-400">portaria@joao</span></p>
-              <p>• Porteiro Tarde: <strong className="text-slate-200">marcos.portaria@solardaspalmeiras.com.br</strong> | Senha: <span className="text-emerald-400">portaria@marcos</span></p>
-              <p>• ADM Predial: <strong className="text-slate-200">sindico@solardaspalmeiras.com.br</strong> | Senha: <span className="text-emerald-400">admin@solarpalmeiras</span></p>
-            </div>
-          </div>
         </div>
       </div>
     </div>

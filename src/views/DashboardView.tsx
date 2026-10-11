@@ -103,23 +103,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               {currentUser.role === 'admin' ? (
                 <>
                   <Eye className="w-3.5 h-3.5 text-indigo-400" />
-                  <span className="text-indigo-400">ADM Predial (Modo Observador) · {storage.getCondo().name}</span>
+                  <span className="text-indigo-400">ADM Predial · {storage.getCondo().name}</span>
                 </>
               ) : (
                 <>
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-emerald-400">Posto de Atendimento Ativo · {storage.getCondo().name}</span>
+                  <span className="text-emerald-400">Portaria · {storage.getCondo().name}</span>
                 </>
               )}
             </div>
             <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
               Olá, {currentUser.name.split(' ')[0]}!
             </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {currentUser.role === 'admin'
-                ? 'Painel de observação do condomínio e gestão da equipe de porteiros.'
-                : 'Painel operacional da portaria em tempo real.'}
-            </p>
           </div>
         </div>
 
@@ -128,7 +123,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {currentUser.role !== 'admin' && onOpenShiftHandover && (
             <button
               onClick={onOpenShiftHandover}
-              title="Realizar Passagem de Turno Oficial"
+              title="Passagem de Turno"
               className="flex items-center gap-1.5 px-3 py-2 bg-amber-950/50 hover:bg-amber-900/70 border border-amber-800/60 text-amber-300 rounded-xl text-xs font-semibold shadow-sm transition-all cursor-pointer"
             >
               <Clock className="w-4 h-4 text-amber-400" />
@@ -139,10 +134,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="flex items-center gap-3 bg-slate-950/80 border border-slate-800 rounded-xl p-2.5 sm:px-4">
             <div className="text-right">
               <span className="text-[11px] text-slate-400 block">
-                {currentUser.role === 'admin' ? 'Perfil Ativo' : 'Turno Atual'}
+                {currentUser.role === 'admin' ? 'Perfil' : 'Turno'}
               </span>
               <span className="text-xs font-semibold text-white">
-                {currentUser.role === 'admin' ? 'ADM Predial' : currentUser.shiftTurn || 'Plantão Ativo'}
+                {currentUser.role === 'admin' ? 'ADM Predial' : currentUser.shiftTurn || 'Plantão'}
               </span>
             </div>
             <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-xs">
@@ -156,67 +151,58 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            {currentUser.role === 'admin' ? 'Atalhos de Observação & Gestão' : 'Ações Rápidas da Portaria'}
+            {currentUser.role === 'admin' ? 'Módulos de Gestão' : 'Operações da Portaria'}
           </h3>
-          <span className="text-[11px] text-slate-500">
-            {currentUser.role === 'admin' ? 'Navegação direta' : 'Operação em 1 clique'}
-          </span>
         </div>
 
         {currentUser.role === 'admin' ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-2.5">
             <button
               onClick={() => onNavigateTab('access')}
-              className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
             >
               <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-emerald-400 group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Acessos</span>
-              <span className="text-[10px] text-slate-400 truncate w-full">Consultar entradas</span>
             </button>
 
             <button
               onClick={() => onNavigateTab('deliveries')}
-              className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
             >
               <Package className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-indigo-400 group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Encomendas</span>
-              <span className="text-[10px] text-slate-400 truncate w-full">Ver pendentes</span>
             </button>
 
             <button
               onClick={() => onNavigateTab('cctv')}
-              className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
             >
               <Video className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-sky-400 group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Câmeras CFTV</span>
-              <span className="text-[10px] text-slate-400 truncate w-full">Ao vivo ({cameras.length})</span>
             </button>
 
             <button
               onClick={() => onNavigateTab('occurrences')}
-              className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
             >
               <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-rose-400 group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Ocorrências</span>
-              <span className="text-[10px] text-slate-400 truncate w-full">Consultar livro</span>
             </button>
 
             <button
               onClick={() => onNavigateTab('apartments')}
-              className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
             >
               <Building className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-emerald-400 group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Ficha Apt</span>
-              <span className="text-[10px] text-slate-400 truncate w-full">Moradores & Vagas</span>
             </button>
 
             <button
               onClick={() => onNavigateTab('admin')}
-              className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white rounded-xl shadow-lg shadow-indigo-950/30 transition-all group min-w-0 text-center"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white rounded-xl shadow-lg shadow-indigo-950/30 transition-all group min-w-0 text-center"
             >
               <Users className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-white group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Porteiros</span>
-              <span className="text-[10px] text-indigo-100 opacity-80 truncate w-full">Cadastrar equipe</span>
             </button>
           </div>
         ) : (
@@ -224,61 +210,55 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Action 1: Registrar Entrada */}
             <button
               onClick={onOpenQuickEntryModal}
-              className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white rounded-xl shadow-lg shadow-emerald-950/30 transition-all group min-w-0 text-center"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white rounded-xl shadow-lg shadow-emerald-950/30 transition-all group min-w-0 text-center"
             >
               <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-white group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Registrar Entrada</span>
-              <span className="text-[10px] text-emerald-100 opacity-80 truncate w-full">Pessoa / Veículo</span>
             </button>
 
             {/* Action 2: Registrar Saída */}
             <button
               onClick={onOpenQuickExitModal}
-              className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
             >
               <LogOut className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-amber-400 group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Registrar Saída</span>
-              <span className="text-[10px] text-slate-400 truncate w-full">Baixa rápida</span>
             </button>
 
             {/* Action 3: Nova Encomenda */}
             <button
               onClick={onOpenQuickDeliveryModal}
-              className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white rounded-xl shadow-lg shadow-indigo-950/30 transition-all group min-w-0 text-center"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white rounded-xl shadow-lg shadow-indigo-950/30 transition-all group min-w-0 text-center"
             >
               <Package className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-white group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Nova Encomenda</span>
-              <span className="text-[10px] text-indigo-100 opacity-80 truncate w-full">Receber & Avisar</span>
             </button>
 
             {/* Action 4: Câmeras CFTV */}
             <button
               onClick={() => onNavigateTab('cctv')}
-              className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
             >
               <Video className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-sky-400 group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Câmeras CFTV</span>
-              <span className="text-[10px] text-slate-400 truncate w-full">Ao vivo ({cameras.length})</span>
             </button>
 
             {/* Action 5: Nova Ocorrência */}
             <button
               onClick={onOpenQuickOccurrenceModal}
-              className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
             >
               <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-rose-400 group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Nova Ocorrência</span>
-              <span className="text-[10px] text-slate-400 truncate w-full">Barulho / Danos</span>
             </button>
 
             {/* Action 6: Consultar Apartamento */}
             <button
               onClick={() => onNavigateTab('apartments')}
-              className="flex flex-col items-center justify-center p-2.5 sm:p-3.5 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
             >
               <Building className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-emerald-400 group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Ficha Apt</span>
-              <span className="text-[10px] text-slate-400 truncate w-full">Moradores & Vagas</span>
             </button>
           </div>
         )}
@@ -411,7 +391,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-                Quem Está Dentro do Condomínio ({insidePeople.length})
+                Pessoas no Condomínio ({insidePeople.length})
               </h3>
             </div>
             <button
@@ -426,7 +406,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="divide-y divide-slate-800/80 flex-1 overflow-y-auto max-h-[360px]">
             {insidePeople.length === 0 ? (
               <div className="p-8 text-center text-slate-400 text-xs">
-                Nenhuma pessoa externa dentro do condomínio no momento.
+                Nenhuma pessoa externa no condomínio.
               </div>
             ) : (
               insidePeople.map((log) => {
@@ -482,7 +462,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="flex items-center gap-2">
               <Package className="w-4 h-4 text-amber-400" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-                Encomendas Aguardando Retirada ({pendingDeliveries.length})
+                Encomendas Pendentes ({pendingDeliveries.length})
               </h3>
             </div>
             <button
@@ -497,7 +477,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <div className="divide-y divide-slate-800/80 flex-1 overflow-y-auto max-h-[360px]">
             {pendingDeliveries.length === 0 ? (
               <div className="p-8 text-center text-slate-400 text-xs">
-                Todas as encomendas foram retiradas. Sem pendências na guarita!
+                Nenhuma encomenda pendente.
               </div>
             ) : (
               pendingDeliveries.map((del) => {
@@ -564,20 +544,20 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* QUICK CCTV CAMERAS STRIP (User requirement: CCTV Integration) */}
+      {/* QUICK CCTV CAMERAS STRIP */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Video className="w-4 h-4 text-sky-400" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-              Monitoramento CFTV em Tempo Real (Câmeras Principais)
+              Câmeras CFTV
             </h3>
           </div>
           <button
             onClick={() => onNavigateTab('cctv')}
             className="text-xs text-sky-400 hover:underline flex items-center gap-1"
           >
-            <span>Central de CFTV Completa</span>
+            <span>Ver CFTV</span>
             <ArrowUpRight className="w-3 h-3" />
           </button>
         </div>
@@ -599,7 +579,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center bg-slate-950 text-slate-600 p-4">
                   <Video className="w-8 h-8 mb-1 opacity-50" />
-                  <span className="text-[11px] font-mono">FEED LIVE SIMULADO</span>
+                  <span className="text-[11px] font-mono">FEED CFTV</span>
                 </div>
               )}
 

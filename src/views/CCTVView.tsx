@@ -558,22 +558,10 @@ export const CCTVView: React.FC<CCTVViewProps> = ({ onAttachSnapshotToOccurrence
               DVR CONECTADO
             </span>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Mosaico ao vivo de portões, cancelas e garagens compatível com DVR Intelbras, DDNS, RTSP e WebRTC.
-          </p>
         </div>
 
         {/* Action Buttons & Helpers */}
         <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-          {/* Guide Button */}
-          <button
-            onClick={() => setShowGuideModal(true)}
-            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-amber-300 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-xl transition-colors cursor-pointer shrink-0"
-          >
-            <HelpCircle className="w-4 h-4 text-amber-400 shrink-0" />
-            <span>Como Ligar o DVR</span>
-          </button>
-
           {/* Zone filter */}
           <select
             value={filterZone}
@@ -623,121 +611,8 @@ export const CCTVView: React.FC<CCTVViewProps> = ({ onAttachSnapshotToOccurrence
             className="flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 rounded-xl shadow-lg shadow-emerald-950/50 transition-all cursor-pointer w-full sm:w-auto shrink-0"
           >
             <Plus className="w-4 h-4" />
-            <span>Adicionar Canal de DVR</span>
+            <span>Adicionar Canal</span>
           </button>
-        </div>
-      </div>
-
-      {/* ACTION & DIAGNOSTIC BANNER: Central de Solução de Acesso às Câmeras */}
-      <div className="bg-gradient-to-r from-slate-900 via-sky-950/40 to-slate-900 border border-sky-800/60 rounded-2xl p-4 text-xs space-y-3 shadow-xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-sky-900/50 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-sky-500/20 text-sky-400 rounded-xl border border-sky-500/30">
-              <Activity className="w-5 h-5" />
-            </div>
-            <div>
-              <span className="font-bold text-white text-sm block">
-                Central de Acesso & Conexão de Câmeras
-              </span>
-              <span className="text-[11px] text-slate-300">
-                Se suas câmeras físicas do DVR ainda não apareceram, confira o diagnóstico ou ative uma opção rápida abaixo:
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={() => setShowDiagnosticModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-white bg-sky-600 hover:bg-sky-500 rounded-xl shadow transition-colors cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Testar Meu DVR Agora</span>
-            </button>
-
-            <button
-              onClick={() => setShowGuideModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-amber-300 bg-amber-950/60 hover:bg-amber-900/80 border border-amber-800 rounded-xl transition-colors cursor-pointer"
-            >
-              <HelpCircle className="w-3.5 h-3.5 text-amber-400" />
-              <span>O que preciso fazer para funcionar?</span>
-            </button>
-          </div>
-        </div>
-
-        {/* 4 Quick Resolution Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-[11px]">
-          <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800 flex flex-col justify-between">
-            <div>
-              <strong className="text-amber-300 block font-semibold mb-1">1. DVR Físico na Portaria</strong>
-              <p className="text-slate-300 leading-relaxed text-[11px]">
-                Precisa de <strong>DDNS Intelbras</strong> e portas <strong>8080 (HTTP)</strong> e <strong>554 (RTSP)</strong> liberadas no roteador/modem da guarita.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setShowDiagnosticModal(true)}
-              className="mt-2 text-sky-400 hover:text-sky-300 font-semibold flex items-center gap-1 self-start text-[11px]"
-            >
-              <span>Testar conexão</span>
-              <ArrowRight className="w-3 h-3" />
-            </button>
-          </div>
-
-          <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800 flex flex-col justify-between">
-            <div>
-              <strong className="text-sky-300 block font-semibold mb-1">2. PC na mesma rede do DVR</strong>
-              <p className="text-slate-300 leading-relaxed text-[11px]">
-                Se você está no computador da guarita, pode abrir o <strong>WebViewer nativo do DVR</strong> em janela local direta sem precisar abrir portas!
-              </p>
-            </div>
-            {selectedCamera?.externalViewerUrl ? (
-              <a
-                href={selectedCamera.externalViewerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-2 text-indigo-400 hover:text-indigo-300 font-semibold flex items-center gap-1 self-start text-[11px]"
-              >
-                <span>Abrir Web DVR da Portaria</span>
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            ) : (
-              <span className="mt-2 text-slate-500 text-[10px]">Cadastre IP/DDNS na câmera</span>
-            )}
-          </div>
-
-          <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800 flex flex-col justify-between">
-            <div>
-              <strong className="text-emerald-300 block font-semibold mb-1">3. Ligar Webcam do Computador</strong>
-              <p className="text-slate-300 leading-relaxed text-[11px]">
-                Funciona imediatamente! Use a câmera USB ou integrada do computador da portaria como câmera do portão social.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleAddWebcamChannel}
-              className="mt-2 text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1 self-start text-[11px]"
-            >
-              <Camera className="w-3 h-3" />
-              <span>Conectar Webcam do Posto</span>
-            </button>
-          </div>
-
-          <div className="p-3 bg-slate-950/70 rounded-xl border border-slate-800 flex flex-col justify-between">
-            <div>
-              <strong className="text-purple-300 block font-semibold mb-1">4. Canal de Teste HLS</strong>
-              <p className="text-slate-300 leading-relaxed text-[11px]">
-                Adicione um canal de streaming real em 30 FPS para testar gravação, snapshots e mosaico em tela cheia.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleAddTestStreamChannel}
-              className="mt-2 text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1 self-start text-[11px]"
-            >
-              <Play className="w-3 h-3" />
-              <span>Adicionar Canal de Teste</span>
-            </button>
-          </div>
         </div>
       </div>
 

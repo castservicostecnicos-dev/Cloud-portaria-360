@@ -2,7 +2,7 @@
   "entities": {
     "Condo": {
       "title": "Condo",
-      "description": "Configurações e dados cadastrais do condomínio",
+      "description": "Configurações e dados cadastrais do condomínio ativo",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -14,6 +14,7 @@
         "blocksCount": { "type": "number" },
         "totalApartments": { "type": "number" },
         "workScale": { "type": "string", "enum": ["12x36", "8h_3turnos"] },
+        "workScaleStartHour": { "type": "string" },
         "workScaleNotes": { "type": "string" },
         "updatedAt": { "type": "string" }
       },
@@ -38,6 +39,7 @@
         "blocksCount": { "type": "number" },
         "aptsCount": { "type": "number" },
         "workScale": { "type": "string", "enum": ["12x36", "8h_3turnos"] },
+        "workScaleStartHour": { "type": "string" },
         "workScaleNotes": { "type": "string" }
       },
       "required": ["id", "name", "address", "city", "active", "status"]
@@ -53,13 +55,15 @@
         "role": { "type": "string", "enum": ["admin", "porteiro", "supervisor", "sindico", "dev"] },
         "phone": { "type": "string" },
         "active": { "type": "boolean" },
+        "condoId": { "type": "string" },
+        "condoName": { "type": "string" },
         "shiftTurn": { "type": "string" }
       },
       "required": ["id", "name", "email", "role", "active"]
     },
     "AccessLog": {
       "title": "AccessLog",
-      "description": "Registro de controle de acesso de moradores, visitantes e prestadores",
+      "description": "Histórico de controle de acesso de moradores, visitantes, prestadores e veículos (retido por pelo menos 2 anos)",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
@@ -68,11 +72,16 @@
         "document": { "type": "string" },
         "apartmentId": { "type": "string" },
         "blockId": { "type": "string" },
+        "vehiclePlate": { "type": "string" },
+        "vehicleModel": { "type": "string" },
+        "vehicleColor": { "type": "string" },
         "purpose": { "type": "string" },
         "entryTime": { "type": "string" },
         "exitTime": { "type": "string" },
         "status": { "type": "string", "enum": ["dentro", "saiu", "aguardando_autorizacao", "recusado", "cancelado"] },
-        "operatorName": { "type": "string" }
+        "operatorName": { "type": "string" },
+        "condoId": { "type": "string" },
+        "createdAt": { "type": "string" }
       },
       "required": ["id", "personName", "personType", "entryTime", "status"]
     },
@@ -88,12 +97,84 @@
         "recipientName": { "type": "string" },
         "type": { "type": "string" },
         "description": { "type": "string" },
-        "status": { "type": "string" },
+        "carrier": { "type": "string" },
+        "trackingCode": { "type": "string" },
+        "status": { "type": "string", "enum": ["aguardando_retirada", "retirado", "devolvido"] },
         "receivedAt": { "type": "string" },
         "pickedUpAt": { "type": "string" },
-        "pickedUpBy": { "type": "string" }
+        "pickedUpBy": { "type": "string" },
+        "condoId": { "type": "string" }
       },
       "required": ["id", "code", "apartmentId", "recipientName", "status", "receivedAt"]
+    },
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "Cadastro e controle de veículos dos moradores e visitantes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "plate": { "type": "string" },
+        "model": { "type": "string" },
+        "brand": { "type": "string" },
+        "color": { "type": "string" },
+        "type": { "type": "string", "enum": ["carro", "moto", "caminhonete", "van", "outro"] },
+        "apartmentId": { "type": "string" },
+        "blockId": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "parkingSpace": { "type": "string" },
+        "condoId": { "type": "string" }
+      },
+      "required": ["id", "plate", "model", "apartmentId", "ownerName"]
+    },
+    "Resident": {
+      "title": "Resident",
+      "description": "Moradores cadastrados nas unidades do condomínio",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "apartmentId": { "type": "string" },
+        "blockId": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "type": { "type": "string", "enum": ["proprietario", "inquilino", "dependente"] },
+        "active": { "type": "boolean" },
+        "condoId": { "type": "string" }
+      },
+      "required": ["id", "name", "apartmentId", "type", "active"]
+    },
+    "Visitor": {
+      "title": "Visitor",
+      "description": "Visitantes autorizados ou agendados",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "document": { "type": "string" },
+        "apartmentId": { "type": "string" },
+        "blockId": { "type": "string" },
+        "authorizedByName": { "type": "string" },
+        "scheduledDate": { "type": "string" },
+        "condoId": { "type": "string" }
+      },
+      "required": ["id", "name", "document", "apartmentId"]
+    },
+    "Contractor": {
+      "title": "Contractor",
+      "description": "Prestadores de serviços e terceirizados",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "document": { "type": "string" },
+        "company": { "type": "string" },
+        "apartmentId": { "type": "string" },
+        "blockId": { "type": "string" },
+        "serviceType": { "type": "string" },
+        "authorizedByName": { "type": "string" },
+        "condoId": { "type": "string" }
+      },
+      "required": ["id", "name", "document", "serviceType", "apartmentId"]
     },
     "Occurrence": {
       "title": "Occurrence",
@@ -107,9 +188,25 @@
         "severity": { "type": "string", "enum": ["baixa", "media", "alta", "urgente"] },
         "status": { "type": "string", "enum": ["aberta", "em_analise", "resolvida", "cancelada"] },
         "reportedBy": { "type": "string" },
-        "createdAt": { "type": "string" }
+        "createdAt": { "type": "string" },
+        "condoId": { "type": "string" }
       },
       "required": ["id", "title", "category", "severity", "status", "createdAt"]
+    },
+    "ShiftEntry": {
+      "title": "ShiftEntry",
+      "description": "Histórico de passagens de turno e conferência de guarita",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "outgoingOperatorName": { "type": "string" },
+        "incomingOperatorName": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "shiftTurn": { "type": "string" },
+        "generalNotes": { "type": "string" },
+        "condoId": { "type": "string" }
+      },
+      "required": ["id", "outgoingOperatorName", "incomingOperatorName", "timestamp", "shiftTurn"]
     },
     "CCTVCamera": {
       "title": "CCTVCamera",
@@ -129,9 +226,36 @@
         "snapshotUrl": { "type": "string" },
         "streamUrl": { "type": "string" },
         "rtspUrl": { "type": "string" },
-        "externalViewerUrl": { "type": "string" }
+        "externalViewerUrl": { "type": "string" },
+        "condoId": { "type": "string" }
       },
       "required": ["id", "name", "zone", "location", "status"]
+    },
+    "Apartment": {
+      "title": "Apartment",
+      "description": "Unidades e apartamentos do condomínio",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "number": { "type": "string" },
+        "blockId": { "type": "string" },
+        "floor": { "type": "number" },
+        "parkingSpaces": { "type": "string" },
+        "condoId": { "type": "string" }
+      },
+      "required": ["id", "number", "blockId"]
+    },
+    "Block": {
+      "title": "Block",
+      "description": "Blocos e torres do condomínio",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "identification": { "type": "string" },
+        "condoId": { "type": "string" }
+      },
+      "required": ["id", "name"]
     }
   },
   "firestore": {
@@ -149,19 +273,47 @@
     },
     "/access_logs/{logId}": {
       "schema": "AccessLog",
-      "description": "Histórico de entradas e saídas da portaria"
+      "description": "Histórico de entradas e saídas da portaria com retenção permanente"
     },
     "/deliveries/{deliveryId}": {
       "schema": "Delivery",
       "description": "Encomendas e entregas aguardando ou retiradas"
     },
+    "/vehicles/{vehicleId}": {
+      "schema": "Vehicle",
+      "description": "Veículos cadastrados dos moradores e visitantes"
+    },
+    "/residents/{residentId}": {
+      "schema": "Resident",
+      "description": "Moradores cadastrados no sistema"
+    },
+    "/visitors/{visitorId}": {
+      "schema": "Visitor",
+      "description": "Visitantes cadastrados e agendados"
+    },
+    "/contractors/{contractorId}": {
+      "schema": "Contractor",
+      "description": "Prestadores de serviços cadastrados"
+    },
     "/occurrences/{occurrenceId}": {
       "schema": "Occurrence",
       "description": "Livro de ocorrências da guarita"
     },
+    "/shift_entries/{shiftId}": {
+      "schema": "ShiftEntry",
+      "description": "Livro digital de passagens de turno da portaria"
+    },
     "/cctv_cameras/{cameraId}": {
       "schema": "CCTVCamera",
       "description": "Câmeras e canais de DVR vinculados"
+    },
+    "/apartments/{apartmentId}": {
+      "schema": "Apartment",
+      "description": "Apartamentos e unidades prediais"
+    },
+    "/blocks/{blockId}": {
+      "schema": "Block",
+      "description": "Blocos e torres do condomínio"
     }
   }
 }

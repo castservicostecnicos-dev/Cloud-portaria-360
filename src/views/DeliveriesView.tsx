@@ -319,18 +319,15 @@ export const DeliveriesView: React.FC<DeliveriesViewProps> = ({
           <div className="flex items-center gap-2">
             <Package className="w-5 h-5 text-indigo-400" />
             <h2 className="text-lg font-bold text-white tracking-tight">
-              Gestão de Encomendas & Recebimentos
+              Encomendas
             </h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Controle e consulta de encomendas e correspondências.
-          </p>
         </div>
 
         {isObserver ? (
           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-950/80 border border-indigo-700/60 text-indigo-300 rounded-lg text-xs font-semibold shrink-0">
             <Eye className="w-4 h-4 text-indigo-400" />
-            <span>Modo Observador (Visualização Síndico/ADM)</span>
+            <span>Modo Observador</span>
           </div>
         ) : (
           <button
@@ -338,7 +335,7 @@ export const DeliveriesView: React.FC<DeliveriesViewProps> = ({
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-md transition-colors"
           >
             <Plus className="w-4 h-4" />
-            <span>Receber Nova Encomenda</span>
+            <span>Nova Encomenda</span>
           </button>
         )}
       </div>
@@ -349,7 +346,7 @@ export const DeliveriesView: React.FC<DeliveriesViewProps> = ({
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Pesquisar por código (ex: ENC-2026), destinatário, rastreio ou apartamento..."
+            placeholder="Buscar por código, morador ou apartamento..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-indigo-500"

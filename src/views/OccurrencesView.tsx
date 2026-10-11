@@ -154,11 +154,8 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-rose-400" />
-            <h2 className="text-lg font-bold text-white tracking-tight">Livro de Ocorrências & Plantão</h2>
+            <h2 className="text-lg font-bold text-white tracking-tight">Livro de Ocorrências</h2>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Registro oficial de ocorrências e histórico de passagens de turno do condomínio.
-          </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -198,7 +195,7 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
           }`}
         >
           <FileText className="w-4 h-4 text-rose-400" />
-          <span>Ocorrências do Condomínio ({occurrences.length})</span>
+          <span>Ocorrências ({occurrences.length})</span>
         </button>
 
         <button
@@ -210,7 +207,7 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
           }`}
         >
           <Clock className="w-4 h-4 text-amber-400" />
-          <span>Livro de Passagem de Turno ({shifts.length})</span>
+          <span>Passagens de Turno ({shifts.length})</span>
         </button>
       </div>
 
@@ -223,7 +220,7 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
               <input
                 type="text"
-                placeholder="Pesquisar por palavras da descrição, local ou envolvidos..."
+                placeholder="Buscar ocorrências..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-rose-500"

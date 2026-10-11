@@ -147,6 +147,12 @@ class StorageService {
     }
     // Ensure starter structure for seeded client condos
     this.initCondoStarterStructure(SEED_CLIENT_CONDOS[1]); // São Sebastião
+
+    // Initialize cloud synchronization and hydrate from Firestore
+    setTimeout(() => {
+      this.setupRealtimeSync();
+      this.hydrateFromFirestore();
+    }, 100);
   }
 
   // Demo Mode management
@@ -320,7 +326,222 @@ class StorageService {
 
   public setActiveCondoId(condoId: string) {
     localStorage.setItem(STORAGE_KEYS.ACTIVE_CONDO_ID, condoId);
+    this.setupRealtimeSync();
+    this.hydrateFromFirestore();
     this.notify();
+  }
+
+  // Realtime synchronization with Firebase Firestore
+  public setupRealtimeSync() {
+    if (this.isDemoMode) return;
+    const activeCondoId = this.getActiveCondoId();
+    firestoreSync.attachRealtimeListeners(activeCondoId, {
+      onAccessLogs: (cloudLogs) => {
+        const local = this.getAccessLogs();
+        const map = new Map<string, AccessLog>();
+        local.forEach((l) => map.set(l.id, l));
+        cloudLogs.forEach((l) => map.set(l.id, l));
+        const merged = Array.from(map.values()).sort((a, b) => (b.entryTime || '').localeCompare(a.entryTime || ''));
+        this.setItem(this.getScopedKey(STORAGE_KEYS.ACCESS_LOGS), merged);
+      },
+      onDeliveries: (cloudDels) => {
+        const local = this.getDeliveries();
+        const map = new Map<string, DeliveryItem>();
+        local.forEach((d) => map.set(d.id, d));
+        cloudDels.forEach((d) => map.set(d.id, d));
+        this.setItem(this.getScopedKey(STORAGE_KEYS.DELIVERIES), Array.from(map.values()));
+      },
+      onVehicles: (cloudVehs) => {
+        const local = this.getVehicles();
+        const map = new Map<string, Vehicle>();
+        local.forEach((v) => map.set(v.id, v));
+        cloudVehs.forEach((v) => map.set(v.id, v));
+        this.setItem(this.getScopedKey(STORAGE_KEYS.VEHICLES), Array.from(map.values()));
+      },
+    });
+  }
+
+  // Hydrate data from Firestore (2-year retention database)
+  public async hydrateFromFirestore(): Promise<void> {
+    if (this.isDemoMode) return;
+    try {
+      const activeCondoId = this.getActiveCondoId();
+
+      // 1. Client Condos
+      const cloudClientCondos = await firestoreSync.fetchCollectionData<ClientCondo>('client_condos');
+      if (cloudClientCondos.length > 0) {
+        const local = this.getClientCondos();
+        const map = new Map<string, ClientCondo>();
+        local.forEach((c) => map.set(c.id, c));
+        cloudClientCondos.forEach((c) => map.set(c.id, c));
+        this.setItem(STORAGE_KEYS.CLIENT_CONDOS, Array.from(map.values()));
+      }
+
+      // 2. Users
+      const cloudUsers = await firestoreSync.fetchCollectionData<User>('users');
+      if (cloudUsers.length > 0) {
+        const local = this.getAllUsers();
+        const map = new Map<string, User>();
+        local.forEach((u) => map.set(u.id, u));
+        cloudUsers.forEach((u) => map.set(u.id, u));
+        this.setItem(STORAGE_KEYS.USERS, Array.from(map.values()));
+      }
+
+      // 3. Access Logs (Permanent 2+ years cloud storage)
+      const cloudLogs = await firestoreSync.fetchCollectionData<AccessLog>('access_logs', activeCondoId);
+      if (cloudLogs.length > 0) {
+        const local = this.getAccessLogs();
+        const map = new Map<string, AccessLog>();
+        local.forEach((l) => map.set(l.id, l));
+        cloudLogs.forEach((l) => map.set(l.id, l));
+        const merged = Array.from(map.values()).sort((a, b) => (b.entryTime || '').localeCompare(a.entryTime || ''));
+        this.setItem(this.getScopedKey(STORAGE_KEYS.ACCESS_LOGS), merged);
+      }
+
+      // 4. Deliveries
+      const cloudDeliveries = await firestoreSync.fetchCollectionData<DeliveryItem>('deliveries', activeCondoId);
+      if (cloudDeliveries.length > 0) {
+        const local = this.getDeliveries();
+        const map = new Map<string, DeliveryItem>();
+        local.forEach((d) => map.set(d.id, d));
+        cloudDeliveries.forEach((d) => map.set(d.id, d));
+        this.setItem(this.getScopedKey(STORAGE_KEYS.DELIVERIES), Array.from(map.values()));
+      }
+
+      // 5. Vehicles
+      const cloudVehicles = await firestoreSync.fetchCollectionData<Vehicle>('vehicles', activeCondoId);
+      if (cloudVehicles.length > 0) {
+        const local = this.getVehicles();
+        const map = new Map<string, Vehicle>();
+        local.forEach((v) => map.set(v.id, v));
+        cloudVehicles.forEach((v) => map.set(v.id, v));
+        this.setItem(this.getScopedKey(STORAGE_KEYS.VEHICLES), Array.from(map.values()));
+      }
+
+      // 6. Occurrences
+      const cloudOccurrences = await firestoreSync.fetchCollectionData<Occurrence>('occurrences', activeCondoId);
+      if (cloudOccurrences.length > 0) {
+        const local = this.getOccurrences();
+        const map = new Map<string, Occurrence>();
+        local.forEach((o) => map.set(o.id, o));
+        cloudOccurrences.forEach((o) => map.set(o.id, o));
+        this.setItem(this.getScopedKey(STORAGE_KEYS.OCCURRENCES), Array.from(map.values()));
+      }
+
+      // 7. Residents
+      const cloudResidents = await firestoreSync.fetchCollectionData<Resident>('residents', activeCondoId);
+      if (cloudResidents.length > 0) {
+        const local = this.getResidents();
+        const map = new Map<string, Resident>();
+        local.forEach((r) => map.set(r.id, r));
+        cloudResidents.forEach((r) => map.set(r.id, r));
+        this.setItem(this.getScopedKey(STORAGE_KEYS.RESIDENTS), Array.from(map.values()));
+      }
+
+      // 8. Shift entries
+      const cloudShifts = await firestoreSync.fetchCollectionData<ShiftEntry>('shift_entries', activeCondoId);
+      if (cloudShifts.length > 0) {
+        const local = this.getShiftEntries();
+        const map = new Map<string, ShiftEntry>();
+        local.forEach((s) => map.set(s.id, s));
+        cloudShifts.forEach((s) => map.set(s.id, s));
+        this.setItem(this.getScopedKey(STORAGE_KEYS.SHIFT_ENTRIES), Array.from(map.values()));
+      }
+
+      this.notify();
+    } catch (e) {
+      console.warn('[Storage] Hydration from Firestore note:', e);
+    }
+  }
+
+  // Push all currently stored records to Firestore
+  public async pushAllLocalDataToFirestore(): Promise<{ success: boolean; count: number }> {
+    if (this.isDemoMode) return { success: false, count: 0 };
+    let count = 0;
+    const activeCondoId = this.getActiveCondoId();
+
+    try {
+      // 1. Condo
+      const condo = this.getCondo();
+      await firestoreSync.syncCondo(condo);
+      count++;
+
+      // 2. Client condos
+      const clientCondos = this.getClientCondos();
+      for (const c of clientCondos) {
+        await firestoreSync.syncClientCondo(c);
+        count++;
+      }
+
+      // 3. Users
+      const users = this.getAllUsers();
+      for (const u of users) {
+        await firestoreSync.syncUser(u);
+        count++;
+      }
+
+      // 4. Access logs
+      const logs = this.getAccessLogs();
+      for (const l of logs) {
+        await firestoreSync.syncAccessLog(l, activeCondoId);
+        count++;
+      }
+
+      // 5. Vehicles
+      const vehicles = this.getVehicles();
+      for (const v of vehicles) {
+        await firestoreSync.syncVehicle(v, activeCondoId);
+        count++;
+      }
+
+      // 6. Deliveries
+      const dels = this.getDeliveries();
+      for (const d of dels) {
+        await firestoreSync.syncDelivery(d, activeCondoId);
+        count++;
+      }
+
+      // 7. Occurrences
+      const occs = this.getOccurrences();
+      for (const o of occs) {
+        await firestoreSync.syncOccurrence(o, activeCondoId);
+        count++;
+      }
+
+      // 8. Residents
+      const residents = this.getResidents();
+      for (const r of residents) {
+        await firestoreSync.syncResident(r, activeCondoId);
+        count++;
+      }
+
+      // 9. Visitors
+      const visitors = this.getVisitors();
+      for (const vis of visitors) {
+        await firestoreSync.syncVisitor(vis, activeCondoId);
+        count++;
+      }
+
+      // 10. Contractors
+      const contractors = this.getContractors();
+      for (const c of contractors) {
+        await firestoreSync.syncContractor(c, activeCondoId);
+        count++;
+      }
+
+      // 11. Shift entries
+      const shifts = this.getShiftEntries();
+      for (const s of shifts) {
+        await firestoreSync.syncShiftEntry(s, activeCondoId);
+        count++;
+      }
+
+      this.addAuditLog('Sincronização em Nuvem', 'Firestore', `${count} registros sincronizados com sucesso no banco de dados Firebase`);
+      return { success: true, count };
+    } catch (e) {
+      console.error('[Storage] Error pushing data to Firestore:', e);
+      return { success: false, count };
+    }
   }
 
   public getScopedKey(baseKey: string, specificCondoId?: string): string {
@@ -427,6 +648,42 @@ class StorageService {
         },
       };
     }
+
+    // DEV Master é independente: nunca é ligado a nenhum condomínio de cliente
+    if (user.role === 'dev') {
+      if (user.condoId || user.condoName) {
+        delete user.condoId;
+        delete user.condoName;
+      }
+      return user;
+    }
+
+    // STRICT: O porteiro é ligado ao condomínio. Não pode ter porteiro sem condomínio.
+    // Se o condomínio for excluído, o porteiro é excluído e perde o acesso imediatamente.
+    if (user.role === 'porteiro') {
+      const clientCondos = this.getClientCondos();
+      const condoExists = Boolean(user.condoId && clientCondos.some((c) => c.id === user.condoId));
+      if (!condoExists) {
+        this.deleteUser(user.id);
+        this.logout();
+        return {
+          id: 'guest',
+          name: 'Nenhum Operador Conectado',
+          email: '',
+          role: 'porteiro',
+          phone: '',
+          active: false,
+          permissions: {
+            canManageUsers: false,
+            canConfigCondo: false,
+            canDeleteRecords: false,
+            canViewReports: false,
+            canManageSettings: false,
+          },
+        };
+      }
+    }
+
     return user;
   }
 
@@ -455,8 +712,12 @@ class StorageService {
   }
 
   public setCurrentUser(user: User) {
+    if (user.role === 'dev') {
+      delete user.condoId;
+      delete user.condoName;
+    }
     this.setItem(STORAGE_KEYS.CURRENT_USER, user);
-    if (user.condoId) {
+    if (user.role !== 'dev' && user.condoId) {
       this.setActiveCondoId(user.condoId);
     }
     this.addAuditLog('Troca de Operador Ativo', 'Sessão', `Operador alterado para ${user.name} (${user.role})`);
@@ -464,9 +725,9 @@ class StorageService {
 
   // Master Users list
   public getAllUsers(): User[] {
-    const list = this.getItem<User[]>(STORAGE_KEYS.USERS, SEED_USERS);
+    let list = this.getItem<User[]>(STORAGE_KEYS.USERS, SEED_USERS);
 
-    // Ensure the developer account ale11062@gmail.com is always present and up-to-date
+    // Ensure the developer account ale11062@gmail.com is always present, up-to-date, and NOT tied to any client condo
     const devIndex = list.findIndex((u) => u.email.toLowerCase() === 'ale11062@gmail.com');
     if (devIndex === -1) {
       list.unshift(SEED_USERS[0]);
@@ -482,45 +743,62 @@ class StorageService {
           canViewReports: true,
           canManageSettings: true,
         };
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(list));
       }
+      delete list[devIndex].condoId;
+      delete list[devIndex].condoName;
     }
 
-    // Ensure seed users have their condoId assigned if missing
-    let updated = false;
+    // STRICT REQUIREMENT:
+    // "Porteiros, são ligados aos condomínios. Quando um condomínio deixa de existir, o porteiro deve ser excluído tbm."
+    const clientCondos = this.getClientCondos();
+    const validCondoMap = new Map(clientCondos.map((c) => [c.id, c.name]));
+
+    let needsSave = false;
+
+    // Automatically remove/prune any porteiro without a valid existing condo
+    const orphanedPorteiros = list.filter((u) => u.role === 'porteiro' && (!u.condoId || !validCondoMap.has(u.condoId)));
+    if (orphanedPorteiros.length > 0) {
+      orphanedPorteiros.forEach((p) => {
+        firestoreSync.deleteUser(p.id);
+      });
+      list = list.filter((u) => !(u.role === 'porteiro' && (!u.condoId || !validCondoMap.has(u.condoId))));
+      needsSave = true;
+    }
+
+    // Ensure users have clean condo association
     list.forEach((u) => {
-      if (u.role !== 'dev' && !u.condoId) {
-        const seedMatch = SEED_USERS.find((s) => s.email.toLowerCase() === u.email.toLowerCase());
-        if (seedMatch && seedMatch.condoId) {
-          u.condoId = seedMatch.condoId;
-          u.condoName = seedMatch.condoName;
-          updated = true;
-        } else {
-          u.condoId = 'condo-solar-palmeiras';
-          u.condoName = 'Residencial Solar das Palmeiras';
-          updated = true;
+      if (u.role === 'dev') {
+        delete u.condoId;
+        delete u.condoName;
+      } else if (u.condoId && validCondoMap.has(u.condoId)) {
+        const correctName = validCondoMap.get(u.condoId);
+        if (correctName && u.condoName !== correctName) {
+          u.condoName = correctName;
+          needsSave = true;
         }
       }
     });
 
-    // Ensure Pedro Silveira (porteiro of São Sebastião) is in the users list
-    if (!list.some((u) => u.email.toLowerCase() === 'pedro.portaria@saosebastiao.com.br')) {
+    // Ensure Pedro Silveira (porteiro of São Sebastião) is in the users list if São Sebastião exists
+    if (validCondoMap.has('condo-sao-sebastiao') && !list.some((u) => u.email.toLowerCase() === 'pedro.portaria@saosebastiao.com.br')) {
       const pedro = SEED_USERS.find((s) => s.email.toLowerCase() === 'pedro.portaria@saosebastiao.com.br');
       if (pedro) {
         list.push(pedro);
-        updated = true;
+        needsSave = true;
       }
     }
 
-    // Ensure João Silva (ADM of São Sebastião) has condoId 'condo-sao-sebastiao'
-    const joaoIdx = list.findIndex((u) => u.email.toLowerCase() === 'joao.adm@saosebastiao.com.br');
-    if (joaoIdx >= 0 && list[joaoIdx].condoId !== 'condo-sao-sebastiao') {
-      list[joaoIdx].condoId = 'condo-sao-sebastiao';
-      list[joaoIdx].condoName = 'Condomínio Edifício São Sebastião';
-      updated = true;
+    // Ensure João Silva (ADM of São Sebastião) has condoId 'condo-sao-sebastiao' if São Sebastião exists
+    if (validCondoMap.has('condo-sao-sebastiao')) {
+      const joaoIdx = list.findIndex((u) => u.email.toLowerCase() === 'joao.adm@saosebastiao.com.br');
+      if (joaoIdx >= 0 && list[joaoIdx].condoId !== 'condo-sao-sebastiao') {
+        list[joaoIdx].condoId = 'condo-sao-sebastiao';
+        list[joaoIdx].condoName = 'Condomínio Edifício São Sebastião';
+        needsSave = true;
+      }
     }
 
-    if (updated) {
+    if (needsSave) {
       localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(list));
     }
 
@@ -545,8 +823,6 @@ class StorageService {
 
     // STRICT REQUIREMENT: ADM Predial or Porteiro or Supervisor
     // CAN ONLY SEE USERS BELONGING TO THEIR CURRENT ACTIVE CONDOMINIUM!
-    // A porteiro sees only their condo's users.
-    // An ADM sees only users belonging to the active condo they are currently managing!
     const activeCondoId = this.getActiveCondoId();
     return allUsers.filter((u) => u.condoId === activeCondoId);
   }
@@ -568,6 +844,38 @@ class StorageService {
       return { success: false, message: 'Senha incorreta. Verifique suas credenciais.' };
     }
 
+    // DEV Master é independente: sem vínculo com condomínio de cliente
+    if (user.role === 'dev') {
+      delete user.condoId;
+      delete user.condoName;
+      delete user.shiftTurn;
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      user.lastLogin = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      this.saveUser(user);
+      this.setCurrentUser(user);
+      this.addAuditLog('Login de Usuário', 'Autenticação', `Dev Master (${user.email}) autenticado com sucesso`);
+      return { success: true, user, message: 'Login realizado com sucesso!' };
+    }
+
+    // STRICT: O porteiro é ligado ao condomínio. Não pode ter porteiro sem condomínio.
+    if (user.role === 'porteiro') {
+      if (!user.condoId) {
+        this.deleteUser(user.id);
+        return { success: false, message: 'Acesso negado: Porteiro sem condomínio vinculado. O cadastro foi removido.' };
+      }
+      const clientCondos = this.getClientCondos();
+      const targetCondo = clientCondos.find((c) => c.id === user.condoId);
+      if (!targetCondo) {
+        this.deleteUser(user.id);
+        return { success: false, message: 'Acesso negado: O condomínio deste porteiro foi excluído do sistema. O cadastro do porteiro foi removido.' };
+      }
+      if (!targetCondo.active) {
+        return { success: false, message: 'Acesso temporariamente bloqueado: O condomínio deste porteiro está desativado.' };
+      }
+      user.condoName = targetCondo.name;
+    }
+
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, '0');
     user.lastLogin = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
@@ -584,7 +892,7 @@ class StorageService {
     return { success: true, user, message: 'Login realizado com sucesso!' };
   }
 
-  public recoverPassword(email: string): { success: boolean; message: string; recoveredPassword?: string } {
+  public recoverPassword(email: string): { success: boolean; message: string } {
     const users = this.getAllUsers();
     const cleanEmail = email.trim().toLowerCase();
     const user = users.find((u) => u.email.trim().toLowerCase() === cleanEmail);
@@ -593,24 +901,36 @@ class StorageService {
       return { success: false, message: 'Nenhuma conta encontrada com o e-mail informado.' };
     }
 
-    const pass = user.password || 'senha123';
-    this.addAuditLog('Recuperação de Senha', 'Autenticação', `Solicitação de recuperação para ${user.email}`);
+    this.addAuditLog('Solicitação de Senha', 'Autenticação', `Solicitação de redefinição registrada para ${user.email}`);
 
     return {
       success: true,
-      message: `Credenciais localizadas com sucesso! Sua senha de acesso é: "${pass}"`,
-      recoveredPassword: pass,
+      message: 'Solicitação registrada. A recuperação de credenciais é realizada exclusivamente pelo Administrador Dev Master.',
     };
   }
 
   public saveUser(user: User) {
-    const activeCondoId = this.getActiveCondoId();
-    const condo = this.getCondo();
-
-    // If user has no condoId, automatically assign the active condo
-    if (user.role !== 'dev' && !user.condoId) {
-      user.condoId = activeCondoId;
-      user.condoName = condo.name;
+    if (user.role === 'dev') {
+      delete user.condoId;
+      delete user.condoName;
+      delete user.shiftTurn;
+    } else if (user.role === 'porteiro') {
+      // STRICT: Não pode ter porteiro sem condomínio
+      if (!user.condoId) {
+        throw new Error('Não é permitido cadastrar ou manter porteiro sem condomínio vinculado.');
+      }
+      const targetCondo = this.getClientCondos().find((c) => c.id === user.condoId);
+      if (!targetCondo) {
+        throw new Error('O condomínio selecionado para o porteiro não existe ou foi excluído.');
+      }
+      user.condoName = targetCondo.name;
+    } else {
+      const activeCondoId = this.getActiveCondoId();
+      const condo = this.getCondo();
+      if (!user.condoId) {
+        user.condoId = activeCondoId;
+        user.condoName = condo.name;
+      }
     }
 
     const users = this.getAllUsers();
@@ -620,14 +940,14 @@ class StorageService {
       this.addAuditLog(
         'Atualização de Usuário',
         'Usuários',
-        `Usuário ${user.name} atualizado no condomínio ${user.condoName || condo.name}`
+        `Usuário ${user.name} atualizado${user.condoName ? ` no condomínio ${user.condoName}` : ' (Dev Master Independente)'}`
       );
     } else {
       users.push(user);
       this.addAuditLog(
         'Cadastro de Usuário',
         'Usuários',
-        `Novo usuário ${user.name} (${user.role}) cadastrado no condomínio ${user.condoName || condo.name}`
+        `Novo usuário ${user.name} (${user.role}) cadastrado${user.condoName ? ` no condomínio ${user.condoName}` : ' (Dev Master Independente)'}`
       );
     }
     this.setItem(STORAGE_KEYS.USERS, users);
@@ -735,9 +1055,46 @@ class StorageService {
     const updated = list.filter((c) => c.id !== condoId);
     this.setItem(STORAGE_KEYS.CLIENT_CONDOS, updated);
     firestoreSync.deleteClientCondo(condoId);
-    if (target) {
-      this.addAuditLog('Exclusão de Condomínio', 'Dev Master', `Condomínio ${target.name} removido da plataforma`);
+
+    // CRITICAL REQUIREMENT:
+    // "Porteiros, são ligados aos condomínios. Quando um condomínio deixa de existir, o porteiro deve ser excluído tbm."
+    const users = this.getAllUsers();
+    const porteirosToDelete = users.filter((u) => u.role === 'porteiro' && (u.condoId === condoId || (target && u.condoName === target.name)));
+    const remainingUsers = users.filter((u) => !(u.role === 'porteiro' && (u.condoId === condoId || (target && u.condoName === target.name))));
+    this.setItem(STORAGE_KEYS.USERS, remainingUsers);
+
+    // Sync deletion for each removed porteiro to firestore
+    porteirosToDelete.forEach((p) => {
+      firestoreSync.deleteUser(p.id);
+    });
+
+    // Check if the currently logged-in user is a porteiro of this condo:
+    // They lose access immediately!
+    const currentUser = this.getItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
+    if (currentUser && currentUser.role === 'porteiro' && (currentUser.condoId === condoId || (target && currentUser.condoName === target.name))) {
+      this.deleteUser(currentUser.id);
+      this.logout();
     }
+
+    // If active condo was the deleted one, reset to first remaining condo or clean up
+    const activeStored = localStorage.getItem(STORAGE_KEYS.ACTIVE_CONDO_ID);
+    if (activeStored === condoId) {
+      if (updated.length > 0) {
+        this.setActiveCondoId(updated[0].id);
+      } else {
+        localStorage.removeItem(STORAGE_KEYS.ACTIVE_CONDO_ID);
+      }
+    }
+
+    if (target) {
+      this.addAuditLog(
+        'Exclusão de Condomínio',
+        'Dev Master',
+        `Condomínio ${target.name} removido da plataforma. ${porteirosToDelete.length} porteiro(s) vinculado(s) excluído(s) e acesso revogado imediatamente.`
+      );
+    }
+
+    this.notify();
   }
 
   public toggleClientCondoStatus(condoId: string): { success: boolean; active: boolean; status: 'ativo' | 'inativo' } {
@@ -750,19 +1107,26 @@ class StorageService {
     list[idx].status = newActive ? 'ativo' : 'inativo';
     this.setItem(STORAGE_KEYS.CLIENT_CONDOS, list);
 
-    // Also toggle the active status of the ADM Predial user
+    // Also toggle the active status of the ADM Predial user and all porteiros of this condo
     const users = this.getAllUsers();
-    const admEmail = list[idx].admPredial.email.toLowerCase();
-    const userIdx = users.findIndex((u) => u.email.toLowerCase() === admEmail);
-    if (userIdx >= 0) {
-      users[userIdx].active = newActive;
-      this.setItem(STORAGE_KEYS.USERS, users);
+    const admEmail = list[idx].admPredial?.email?.toLowerCase();
+    users.forEach((u) => {
+      if ((admEmail && u.email.toLowerCase() === admEmail) || (u.role === 'porteiro' && u.condoId === condoId)) {
+        u.active = newActive;
+      }
+    });
+    this.setItem(STORAGE_KEYS.USERS, users);
+
+    // If deactivated and currently logged in user is a porteiro of this condo, revoke access immediately
+    const currentUser = this.getItem<User | null>(STORAGE_KEYS.CURRENT_USER, null);
+    if (currentUser && currentUser.role === 'porteiro' && currentUser.condoId === condoId && !newActive) {
+      this.logout();
     }
 
     this.addAuditLog(
       'Status de Condomínio Alterado',
       'Dev Master',
-      `Condomínio ${list[idx].name} agora está ${newActive ? 'ATIVO' : 'DESATIVADO'}`
+      `Condomínio ${list[idx].name} agora está ${newActive ? 'ATIVO' : 'DESATIVADO'}. Porteiros vinculados ${newActive ? 'reativados' : 'bloqueados'}.`
     );
 
     return { success: true, active: newActive, status: list[idx].status };
@@ -968,6 +1332,51 @@ class StorageService {
       success: true,
       password: pass,
       message: `Senha de ${users[idx].name} redefinida com sucesso para "${pass}"`,
+    };
+  }
+
+
+  // Reset or Recover Password for ANY User (Dev Master privilege)
+  public resetUserPassword(userId: string, newPassword: string): { success: boolean; message: string } {
+    const users = this.getAllUsers();
+    const idx = users.findIndex((u) => u.id === userId);
+    if (idx === -1) {
+      return { success: false, message: 'Usuário não encontrado.' };
+    }
+
+    const cleanPass = newPassword.trim();
+    if (!cleanPass) {
+      return { success: false, message: 'Informe a nova senha.' };
+    }
+
+    users[idx].password = cleanPass;
+    this.setItem(STORAGE_KEYS.USERS, users);
+
+    // Also sync if ADM Predial
+    const condos = this.getClientCondos();
+    let condoChanged = false;
+    condos.forEach((c) => {
+      if (
+        c.admPredial &&
+        (c.admPredial.id === userId || c.admPredial.email.toLowerCase() === users[idx].email.toLowerCase())
+      ) {
+        c.admPredial.password = cleanPass;
+        condoChanged = true;
+      }
+    });
+    if (condoChanged) {
+      this.setItem(STORAGE_KEYS.CLIENT_CONDOS, condos);
+    }
+
+    this.addAuditLog(
+      'Redefinição de Senha de Usuário',
+      'Dev Master',
+      `Senha do usuário ${users[idx].name} (${users[idx].role}) redefinida pelo Dev Master`
+    );
+
+    return {
+      success: true,
+      message: `Senha de ${users[idx].name} alterada com sucesso!`,
     };
   }
 
@@ -1211,6 +1620,7 @@ class StorageService {
     if (idx >= 0) blocks[idx] = block;
     else blocks.push(block);
     this.setItem(key, blocks);
+    firestoreSync.syncBlock(block, this.getActiveCondoId());
     this.addAuditLog('Bloco/Torre', 'Estrutura', `Bloco ${block.name} salvo`);
   }
 
@@ -1218,6 +1628,7 @@ class StorageService {
     const key = this.getScopedKey(STORAGE_KEYS.BLOCKS);
     const blocks = this.getBlocks().filter((b) => b.id !== blockId);
     this.setItem(key, blocks);
+    firestoreSync.deleteBlock(blockId);
     this.addAuditLog('Bloco/Torre', 'Estrutura', `Bloco ${blockId} removido`);
   }
 
@@ -1235,6 +1646,7 @@ class StorageService {
     if (idx >= 0) apts[idx] = apt;
     else apts.push(apt);
     this.setItem(key, apts);
+    firestoreSync.syncApartment(apt, this.getActiveCondoId());
     this.addAuditLog('Apartamento', 'Unidade', `Apartamento ${apt.number} salvo`);
   }
 
@@ -1242,6 +1654,7 @@ class StorageService {
     const key = this.getScopedKey(STORAGE_KEYS.APARTMENTS);
     const apts = this.getApartments().filter((a) => a.id !== aptId);
     this.setItem(key, apts);
+    firestoreSync.deleteApartment(aptId);
     this.addAuditLog('Apartamento', 'Unidade', `Apartamento ${aptId} removido`);
   }
 
@@ -1259,6 +1672,7 @@ class StorageService {
     if (idx >= 0) list[idx] = resident;
     else list.push(resident);
     this.setItem(key, list);
+    firestoreSync.syncResident(resident, this.getActiveCondoId());
     this.addAuditLog('Morador', 'Cadastro', `Morador(a) ${resident.name} salvo(a)`);
   }
 
@@ -1267,6 +1681,7 @@ class StorageService {
     const list = this.getResidents();
     const target = list.find((r) => r.id === id);
     this.setItem(key, list.filter((r) => r.id !== id));
+    firestoreSync.deleteResident(id);
     if (target) {
       this.addAuditLog('Exclusão Morador', 'Cadastro', `Morador ${target.name} excluído`);
     }
@@ -1286,6 +1701,7 @@ class StorageService {
     if (idx >= 0) list[idx] = visitor;
     else list.push(visitor);
     this.setItem(key, list);
+    firestoreSync.syncVisitor(visitor, this.getActiveCondoId());
     this.addAuditLog('Visitante', 'Visitantes', `Visitante ${visitor.name} salvo(a)`);
   }
 
@@ -1293,6 +1709,7 @@ class StorageService {
     const key = this.getScopedKey(STORAGE_KEYS.VISITORS);
     const list = this.getVisitors().filter((v) => v.id !== id);
     this.setItem(key, list);
+    firestoreSync.deleteVisitor(id);
     this.addAuditLog('Visitante', 'Visitantes', `Visitante ${id} removido`);
   }
 
@@ -1310,6 +1727,7 @@ class StorageService {
     if (idx >= 0) list[idx] = contractor;
     else list.push(contractor);
     this.setItem(key, list);
+    firestoreSync.syncContractor(contractor, this.getActiveCondoId());
     this.addAuditLog('Prestador de Serviço', 'Prestadores', `Prestador ${contractor.name} (${contractor.company}) salvo`);
   }
 
@@ -1317,6 +1735,7 @@ class StorageService {
     const key = this.getScopedKey(STORAGE_KEYS.CONTRACTORS);
     const list = this.getContractors().filter((c) => c.id !== id);
     this.setItem(key, list);
+    firestoreSync.deleteContractor(id);
     this.addAuditLog('Prestador de Serviço', 'Prestadores', `Prestador ${id} removido`);
   }
 
@@ -1358,13 +1777,15 @@ class StorageService {
     if (idx >= 0) list[idx] = veh;
     else list.push(veh);
     this.setItem(key, list);
-    this.addAuditLog('Veículo', 'Garagem', `Veículo placa ${veh.plate} (${veh.model}) salvo`);
+    firestoreSync.syncVehicle(veh, this.getActiveCondoId());
+    this.addAuditLog('Veículo', 'Garagem', `Veículo placa ${veh.plate} (${veh.model}) salvo na nuvem Firestore`);
   }
 
   public deleteVehicle(id: string) {
     const key = this.getScopedKey(STORAGE_KEYS.VEHICLES);
     const list = this.getVehicles().filter((v) => v.id !== id);
     this.setItem(key, list);
+    firestoreSync.deleteVehicle(id);
     this.addAuditLog('Veículo', 'Garagem', `Veículo ${id} removido`);
   }
 
@@ -1382,7 +1803,8 @@ class StorageService {
     if (idx >= 0) list[idx] = log;
     else list.unshift(log); // Newer on top
     this.setItem(key, list);
-    this.addAuditLog('Controle de Acesso', 'Acesso', `${log.personType.toUpperCase()}: ${log.personName} - Status: ${log.status}`);
+    firestoreSync.syncAccessLog(log, this.getActiveCondoId());
+    this.addAuditLog('Controle de Acesso', 'Acesso', `${log.personType.toUpperCase()}: ${log.personName} - Status: ${log.status} (Persistido Firestore)`);
   }
 
   // Deliveries
@@ -1399,7 +1821,16 @@ class StorageService {
     if (idx >= 0) list[idx] = del;
     else list.unshift(del);
     this.setItem(key, list);
-    this.addAuditLog('Encomendas / Recebimentos', 'Recebimento', `${del.type.toUpperCase()} ${del.code} para ${del.recipientName} - Status: ${del.status}`);
+    firestoreSync.syncDelivery(del, this.getActiveCondoId());
+    this.addAuditLog('Encomendas / Recebimentos', 'Recebimento', `${del.type.toUpperCase()} ${del.code} para ${del.recipientName} - Status: ${del.status} (Salvo Firestore)`);
+  }
+
+  public deleteDelivery(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.DELIVERIES);
+    const list = this.getDeliveries().filter((d) => d.id !== id);
+    this.setItem(key, list);
+    firestoreSync.deleteDelivery(id);
+    this.addAuditLog('Encomenda', 'Recebimento', `Encomenda ${id} excluída`);
   }
 
   // Occurrences
@@ -1416,7 +1847,16 @@ class StorageService {
     if (idx >= 0) list[idx] = occ;
     else list.unshift(occ);
     this.setItem(key, list);
-    this.addAuditLog('Livro de Ocorrências', 'Ocorrência', `Ocorrência ${occ.type} em ${occ.location} - Status: ${occ.status}`);
+    firestoreSync.syncOccurrence(occ, this.getActiveCondoId());
+    this.addAuditLog('Livro de Ocorrências', 'Ocorrência', `Ocorrência ${occ.type} em ${occ.location} - Status: ${occ.status} (Salvo Firestore)`);
+  }
+
+  public deleteOccurrence(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.OCCURRENCES);
+    const list = this.getOccurrences().filter((o) => o.id !== id);
+    this.setItem(key, list);
+    firestoreSync.deleteOccurrence(id);
+    this.addAuditLog('Livro de Ocorrências', 'Ocorrência', `Ocorrência ${id} removida`);
   }
 
   // Lost and Found
@@ -1501,7 +1941,8 @@ class StorageService {
     if (idx >= 0) list[idx] = entry;
     else list.unshift(entry);
     this.setItem(key, list);
-    this.addAuditLog('Turno da Portaria', 'Passagem de Turno', `Turno ${entry.shiftTurn} atualizado`);
+    firestoreSync.syncShiftEntry(entry, this.getActiveCondoId());
+    this.addAuditLog('Turno da Portaria', 'Passagem de Turno', `Turno ${entry.shiftTurn} atualizado (Salvo Firestore)`);
   }
 
   // WhatsApp Templates
