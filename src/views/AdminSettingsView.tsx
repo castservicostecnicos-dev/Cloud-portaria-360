@@ -1024,45 +1024,86 @@ export const AdminSettingsView: React.FC = () => {
             </div>
           </div>
 
-          {/* Comandos de Terminal */}
-          <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 space-y-3">
-            <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-sky-400" />
-              <span>Comandos de Build e Deploy</span>
-            </h4>
+          {/* Métodos para Forçar o Deploy */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Método 1: Via Terminal / Wrangler CLI */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 space-y-3">
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-orange-400" />
+                <span>Método 1: Forçar via Terminal (Wrangler CLI)</span>
+              </h4>
+              <p className="text-[11px] text-slate-400">
+                Gera o pacote de produção atualizado e envia imediatamente para o Cloudflare Pages.
+              </p>
 
-            <div className="space-y-2">
-              {[
-                {
-                  label: 'Build de Produção',
-                  cmd: 'npm run build',
-                },
-                {
-                  label: 'Deploy Cloudflare Pages',
-                  cmd: 'npm run deploy:pages',
-                },
-                {
-                  label: 'Deploy Cloudflare Workers',
-                  cmd: 'npm run deploy:workers',
-                },
-              ].map((item, idx) => (
-                <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-950 border border-slate-800 rounded-lg font-mono">
-                  <div>
-                    <span className="text-[11px] text-slate-400 font-sans block mb-0.5">{item.label}</span>
-                    <span className="text-orange-300 font-semibold">{item.cmd}</span>
+              <div className="space-y-2 pt-1">
+                {[
+                  {
+                    label: 'Forçar Deploy Completo (Build + Deploy Pages)',
+                    cmd: 'npm run deploy:force',
+                  },
+                  {
+                    label: 'Deploy Direto no Cloudflare Pages',
+                    cmd: 'npx wrangler pages deploy dist --project-name=portaria360',
+                  },
+                  {
+                    label: 'Build de Produção',
+                    cmd: 'npm run build',
+                  },
+                ].map((item, idx) => (
+                  <div key={idx} className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 bg-slate-950 border border-slate-800 rounded-lg font-mono">
+                    <div className="overflow-hidden">
+                      <span className="text-[10px] text-slate-400 font-sans block mb-0.5">{item.label}</span>
+                      <span className="text-orange-300 font-semibold text-[11px] break-all">{item.cmd}</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(item.cmd);
+                        setCopiedSnippet(item.cmd);
+                        setTimeout(() => setCopiedSnippet(null), 2000);
+                      }}
+                      className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] rounded transition-colors self-start sm:self-auto cursor-pointer shrink-0"
+                    >
+                      {copiedSnippet === item.cmd ? 'Copiado! ✓' : 'Copiar'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(item.cmd);
-                      setCopiedSnippet(item.cmd);
-                      setTimeout(() => setCopiedSnippet(null), 2000);
-                    }}
-                    className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] rounded transition-colors self-start sm:self-auto cursor-pointer"
-                  >
-                    {copiedSnippet === item.cmd ? 'Copiado! ✓' : 'Copiar'}
-                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Método 2: Via Painel Web da Cloudflare */}
+            <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 sm:p-5 space-y-3">
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <Globe className="w-4 h-4 text-sky-400" />
+                <span>Método 2: Forçar pelo Painel da Cloudflare</span>
+              </h4>
+              <p className="text-[11px] text-slate-400">
+                Se o seu projeto estiver conectado ao GitHub/GitLab ou configurado no Cloudflare Pages:
+              </p>
+
+              <div className="space-y-2.5 text-[11px] text-slate-300 bg-slate-950 p-3 rounded-lg border border-slate-800">
+                <div className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-orange-950 text-orange-400 border border-orange-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
+                  <span>Acesse <strong>dash.cloudflare.com</strong> e vá em <strong>Workers & Pages</strong>.</span>
                 </div>
-              ))}
+                <div className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-orange-950 text-orange-400 border border-orange-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
+                  <span>Clique no projeto <strong>portaria360</strong> e abra a aba <strong>Deployments</strong> (Implantações).</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-orange-950 text-orange-400 border border-orange-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
+                  <span>Clique nos <strong>3 pontinhos (...)</strong> ao lado do último deploy e selecione <strong>Retry deployment</strong>.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="w-4 h-4 rounded-full bg-orange-950 text-orange-400 border border-orange-700 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">4</span>
+                  <span>Ou clique no botão <strong>Create deployment</strong> para enviar manualmente a pasta <code>dist</code>.</span>
+                </div>
+              </div>
+
+              {/* Dica de Limpeza de Cache */}
+              <div className="p-2.5 rounded-lg bg-sky-950/40 border border-sky-800/40 text-[11px] text-sky-200">
+                <strong>Dica de Cache:</strong> Caso o deploy conclua mas você ainda veja a versão anterior, vá em <strong>Caching</strong> &gt; <strong>Configuration</strong> &gt; <strong>Purge Everything</strong> (Limpar Tudo) no painel do Cloudflare para limpar a CDN instantaneamente.
+              </div>
             </div>
           </div>
         </div>
