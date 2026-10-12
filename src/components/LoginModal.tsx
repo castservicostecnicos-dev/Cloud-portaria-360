@@ -171,6 +171,39 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <span>Entrar no Sistema</span>
               </button>
             </div>
+
+            {/* Acessos Rápidos / Credenciais Disponíveis */}
+            <div className="pt-2 border-t border-slate-800 space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] text-slate-400">
+                <span>Contas para Acesso Rápido:</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('ale11062@gmail.com');
+                    setPassword('cast@2468');
+                    setErrorMsg(null);
+                  }}
+                  className="p-2 rounded-lg bg-slate-950 border border-purple-500/30 hover:border-purple-500 text-left transition-colors cursor-pointer group"
+                >
+                  <span className="block text-[10px] font-bold text-purple-300">DEV Master</span>
+                  <span className="block text-[9px] text-slate-400 truncate">ale11062@gmail.com</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEmail('joao.portaria@solardaspalmeiras.com.br');
+                    setPassword('portaria@joao');
+                    setErrorMsg(null);
+                  }}
+                  className="p-2 rounded-lg bg-slate-950 border border-emerald-500/30 hover:border-emerald-500 text-left transition-colors cursor-pointer group"
+                >
+                  <span className="block text-[10px] font-bold text-emerald-300">Porteiro (Solar)</span>
+                  <span className="block text-[9px] text-slate-400 truncate">joao.portaria@...</span>
+                </button>
+              </div>
+            </div>
           </form>
         ) : (
           <div className="space-y-4">
