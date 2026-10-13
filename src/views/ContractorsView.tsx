@@ -46,6 +46,7 @@ export const ContractorsView: React.FC<ContractorsViewProps> = ({
   const [validFrom, setValidFrom] = useState(new Date().toISOString().slice(0, 10));
   const [validUntil, setValidUntil] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState('');
+  const [isPreAuthorized, setIsPreAuthorized] = useState(true);
 
   const refreshData = () => {
     setContractors(storage.getContractors());
@@ -96,6 +97,12 @@ export const ContractorsView: React.FC<ContractorsViewProps> = ({
     };
 
     storage.saveContractor(newCont);
+
+    // Se o morador já liberou a entrada, registra o prestador imediatamente como dentro do condomínio
+    if (isPreAuthorized) {
+      onFastCheckIn(newCont.name, 'prestador', newCont.apartmentId, newCont.blockId, newCont.document);
+    }
+
     setShowAddModal(false);
   };
 
@@ -369,21 +376,44 @@ export const ContractorsView: React.FC<ContractorsViewProps> = ({
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-teal-500 resize-none"
                 />
               </div>
+
+              <div className="p-3.5 bg-teal-950/40 border border-teal-800/50 rounded-xl text-xs text-teal-200 space-y-1.5">
+                <p className="font-bold text-white flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Regra de Entrada e Liberação pelo Morador:
+                </p>
+                <p className="text-slate-300 text-[11px] leading-relaxed">
+                  O porteiro contata a unidade responsável pelo serviço. Se o morador liberar, o cadastro é concluído e a entrada é concedida imediatamente. Se o morador não liberar ou não autorizar, o prestador não entra e nenhum cadastro é registrado.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="chk-pre-cont"
+                  checked={isPreAuthorized}
+                  onChange={(e) => setIsPreAuthorized(e.target.checked)}
+                  className="accent-teal-600 rounded cursor-pointer"
+                />
+                <label htmlFor="chk-pre-cont" className="text-slate-200 font-medium cursor-pointer">
+                  Morador contatado e autorizou o acesso imediato do prestador
+                </label>
+              </div>
             </div>
 
             <div className="px-5 py-3.5 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold rounded-lg shadow-md transition-colors"
+                className="px-5 py-2 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded-lg shadow-md transition-colors cursor-pointer"
               >
-                Salvar Prestador
+                Cadastrar e Liberar Entrada
               </button>
             </div>
           </form>

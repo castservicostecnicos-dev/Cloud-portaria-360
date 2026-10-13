@@ -71,7 +71,7 @@ export default function App() {
     setOpenOccurrencesCount(ocos.filter((o) => o.status === 'aberta' || o.status === 'em_analise').length);
 
     const logs = storage.getAccessLogs();
-    setWaitingAuthCount(logs.filter((l) => l.status === 'aguardando_autorizacao').length);
+    setWaitingAuthCount(0);
   };
 
   useEffect(() => {

@@ -231,10 +231,8 @@ export const AccessControlView: React.FC<AccessControlViewProps> = ({ onTriggerW
             className="bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none"
           >
             <option value="all">Todos os Status</option>
-            <option value="dentro">Dentro do Condomínio</option>
-            <option value="aguardando_autorizacao">Aguardando Autorização</option>
+            <option value="dentro">Dentro do Condomínio (Liberado)</option>
             <option value="saiu">Já Saíram</option>
-            <option value="recusado">Recusados</option>
             <option value="cancelado">Cancelados</option>
           </select>
 
@@ -350,22 +348,15 @@ export const AccessControlView: React.FC<AccessControlViewProps> = ({ onTriggerW
                             No condomínio
                           </span>
                         )}
-                        {log.status === 'aguardando_autorizacao' && (
-                          <span className="inline-flex items-center gap-1 text-amber-300 font-medium text-xs bg-amber-950/40 border border-amber-800/60 px-2 py-0.5 rounded-full">
-                            <Clock className="w-3 h-3 text-amber-400" />
-                            Aguardando
-                          </span>
-                        )}
                         {log.status === 'saiu' && (
                           <span className="inline-flex items-center gap-1 text-slate-400 text-xs">
                             <CheckCircle2 className="w-3.5 h-3.5 text-slate-500" />
                             Saiu
                           </span>
                         )}
-                        {log.status === 'recusado' && (
-                          <span className="inline-flex items-center gap-1 text-rose-400 text-xs">
-                            <XCircle className="w-3.5 h-3.5 text-rose-500" />
-                            Recusado
+                        {log.status === 'cancelado' && (
+                          <span className="inline-flex items-center gap-1 text-slate-500 text-xs">
+                            Cancelado
                           </span>
                         )}
                       </td>
@@ -377,23 +368,6 @@ export const AccessControlView: React.FC<AccessControlViewProps> = ({ onTriggerW
                             <span className="text-[10px] text-slate-500 font-mono italic">Observador</span>
                           ) : (
                             <>
-                              {log.status === 'aguardando_autorizacao' && (
-                                <>
-                                  <button
-                                    onClick={() => handleUpdateStatus(log, 'dentro')}
-                                    className="px-2 py-1 text-[11px] font-semibold text-emerald-300 bg-emerald-950/60 border border-emerald-800 hover:bg-emerald-900 rounded transition-colors"
-                                  >
-                                    Liberar
-                                  </button>
-                                  <button
-                                    onClick={() => handleUpdateStatus(log, 'recusado')}
-                                    className="px-2 py-1 text-[11px] text-rose-300 bg-rose-950/40 border border-rose-800 hover:bg-rose-900 rounded transition-colors"
-                                  >
-                                    Recusar
-                                  </button>
-                                </>
-                              )}
-
                               {log.status === 'dentro' && (
                                 <button
                                   onClick={() => handleRegisterExit(log)}
@@ -456,15 +430,11 @@ export const AccessControlView: React.FC<AccessControlViewProps> = ({ onTriggerW
                 </div>
 
                 <div>
-                  <label className="block text-slate-300 font-medium mb-1">Status Imediato *</label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as AccessStatus)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500"
-                  >
-                    <option value="dentro">Dentro do Condomínio (Liberado)</option>
-                    <option value="aguardando_autorizacao">Aguardando Autorização Morador</option>
-                  </select>
+                  <label className="block text-slate-300 font-medium mb-1">Liberação do Morador *</label>
+                  <div className="w-full bg-emerald-950/40 border border-emerald-700/60 rounded-lg px-3 py-2 text-emerald-300 flex items-center gap-1.5 font-medium">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Liberado pelo Morador (Entrada Concedida)</span>
+                  </div>
                 </div>
               </div>
 
@@ -661,16 +631,19 @@ export const AccessControlView: React.FC<AccessControlViewProps> = ({ onTriggerW
             <div className="px-5 py-3.5 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setShowNewEntryModal(false)}
-                className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                onClick={() => {
+                  setShowNewEntryModal(false);
+                  resetForm();
+                }}
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-md transition-colors"
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg shadow-md transition-colors cursor-pointer"
               >
-                Registrar Entrada
+                Cadastrar e Liberar Entrada
               </button>
             </div>
           </form>

@@ -67,7 +67,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   // Compute live indicators
   const insidePeople = accessLogs.filter((l) => l.status === 'dentro');
-  const waitingApproval = accessLogs.filter((l) => l.status === 'aguardando_autorizacao');
   const contractorsInside = insidePeople.filter((l) => l.personType === 'prestador');
   const visitorsInside = insidePeople.filter((l) => l.personType === 'visitante');
   const pendingDeliveries = deliveries.filter((d) => d.status !== 'retirado' && d.status !== 'devolvido');
@@ -286,22 +285,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
         {/* Metric 2 */}
         <div
-          onClick={() => onNavigateTab('access')}
-          className={`border rounded-xl p-3 cursor-pointer transition-colors ${
-            waitingApproval.length > 0
-              ? 'bg-amber-950/20 border-amber-600/50 hover:border-amber-500'
-              : 'bg-slate-900 border-slate-800 hover:border-slate-700'
-          }`}
+          onClick={() => onNavigateTab('visitors')}
+          className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-3 cursor-pointer transition-colors"
         >
           <div className="flex items-center justify-between text-slate-400 text-xs mb-1">
-            <span>Aguardando Aprovação</span>
-            <Clock className={`w-4 h-4 ${waitingApproval.length > 0 ? 'text-amber-400' : 'text-slate-500'}`} />
+            <span>Visitantes Presentes</span>
+            <Users className="w-4 h-4 text-purple-400" />
           </div>
-          <div className={`text-2xl font-bold font-mono-tabular ${waitingApproval.length > 0 ? 'text-amber-300' : 'text-white'}`}>
-            {waitingApproval.length}
+          <div className="text-2xl font-bold font-mono-tabular text-purple-300">
+            {visitorsInside.length}
           </div>
           <div className="text-[11px] text-slate-400 flex items-center justify-between mt-1">
-            <span>Interfone / WhatsApp</span>
+            <span>Liberados por apto</span>
             <ArrowUpRight className="w-3 h-3 text-slate-500" />
           </div>
         </div>

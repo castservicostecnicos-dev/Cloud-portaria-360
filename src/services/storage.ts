@@ -24,6 +24,9 @@ import {
   CondoWorkScale,
   DemoPersona,
   getWorkScaleSummary,
+  BackupSnapshot,
+  BackupConfig,
+  BackupTrigger,
 } from '../types';
 
 export const DEMO_PERSONAS: DemoPersona[] = [
@@ -118,6 +121,8 @@ const STORAGE_KEYS = {
   WHATSAPP_TEMPLATES: 'portaria360_whatsapp_templates',
   CCTV_CAMERAS: 'portaria360_cctv_cameras',
   COMMUNICATION_NOTICES: 'portaria360_communication_notices',
+  BACKUP_SNAPSHOTS: 'portaria360_backup_snapshots',
+  BACKUP_CONFIG: 'portaria360_backup_config',
 };
 
 class StorageService {
@@ -148,11 +153,12 @@ class StorageService {
     // Ensure starter structure for seeded client condos
     this.initCondoStarterStructure(SEED_CLIENT_CONDOS[1]); // São Sebastião
 
-    // Initialize cloud synchronization and hydrate from Firestore
+    // Initialize cloud synchronization, hydrate from Firestore, and verify daily backup
     setTimeout(() => {
       this.setupRealtimeSync();
       this.hydrateFromFirestore();
-    }, 100);
+      this.checkAndRunDailyAutoBackup();
+    }, 200);
   }
 
   // Demo Mode management
@@ -2104,6 +2110,281 @@ class StorageService {
     this.setItem(key, logs);
   }
 
+  // ==========================================
+  // BACKUP & AUTOMATIC SNAPSHOTS SYSTEM
+  // ==========================================
+
+  public triggerBrowserDownload(filename: string, content: string, mimeType = 'application/json'): boolean {
+    try {
+      if (typeof window === 'undefined' || typeof document === 'undefined') return false;
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      return true;
+    } catch (e) {
+      console.error('[Storage] Error triggering browser download:', e);
+      return false;
+    }
+  }
+
+  public getBackupConfig(): BackupConfig {
+    const defaultConfig: BackupConfig = {
+      autoSnapshotOnShiftClose: true,
+      forceDownloadOnShiftClose: true,
+      autoDailySnapshotOnLogin: true,
+      maxLocalSnapshots: 30,
+      lastDailyBackupDate: undefined,
+    };
+    return this.getItem<BackupConfig>(STORAGE_KEYS.BACKUP_CONFIG, defaultConfig);
+  }
+
+  public saveBackupConfig(config: Partial<BackupConfig>) {
+    const current = this.getBackupConfig();
+    const updated: BackupConfig = { ...current, ...config };
+    this.setItem(STORAGE_KEYS.BACKUP_CONFIG, updated);
+    this.addAuditLog('Configuração de Backup', 'Segurança', 'Parâmetros de backup diário e fechamento de turno atualizados.');
+  }
+
+  public getBackupSnapshots(): BackupSnapshot[] {
+    const list = this.getItem<BackupSnapshot[]>(STORAGE_KEYS.BACKUP_SNAPSHOTS, []);
+    return list.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+  }
+
+  public saveBackupSnapshot(snapshot: BackupSnapshot) {
+    const list = this.getBackupSnapshots();
+    const config = this.getBackupConfig();
+    const existingIdx = list.findIndex((s) => s.id === snapshot.id);
+    if (existingIdx >= 0) {
+      list[existingIdx] = snapshot;
+    } else {
+      list.unshift(snapshot);
+    }
+    // Limit to max retention to preserve local browser storage
+    const max = config.maxLocalSnapshots || 30;
+    while (list.length > max) {
+      list.pop();
+    }
+    this.setItem(STORAGE_KEYS.BACKUP_SNAPSHOTS, list);
+  }
+
+  public deleteBackupSnapshot(id: string) {
+    const list = this.getBackupSnapshots().filter((s) => s.id !== id);
+    this.setItem(STORAGE_KEYS.BACKUP_SNAPSHOTS, list);
+    this.addAuditLog('Exclusão de Snapshot', 'Segurança', `Snapshot de backup ${id} removido do armazenamento local.`);
+  }
+
+  /**
+   * Creates an automatic or manual backup snapshot of occurrences and access logs (and all database state).
+   * Saves it to browser localStorage, and optionally triggers a forced file download.
+   */
+  public createBackupSnapshot(
+    trigger: BackupTrigger = 'manual',
+    operatorName?: string,
+    forceDownload?: boolean,
+    notes?: string
+  ): BackupSnapshot {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    const timestamp = `${dateStr} ${timeStr}`;
+    const fileTimestamp = `${dateStr}_${pad(now.getHours())}h${pad(now.getMinutes())}`;
+
+    const condo = this.getCondo();
+    const currentUser = this.getCurrentUser();
+    const effectiveOperator = operatorName || currentUser?.name || 'Portaria';
+
+    const occurrences = this.getOccurrences();
+    const accessLogs = this.getAccessLogs();
+    const visitors = this.getVisitors();
+    const deliveries = this.getDeliveries();
+    const shifts = this.getShiftEntries();
+
+    // Export full state for disaster recovery
+    const fullState: Record<string, unknown> = {};
+    for (const [name, key] of Object.entries(STORAGE_KEYS)) {
+      if (key !== STORAGE_KEYS.BACKUP_SNAPSHOTS) {
+        fullState[name] = this.getItem(key, null);
+      }
+    }
+
+    const id = `snap-${Date.now()}`;
+    const snapshot: BackupSnapshot = {
+      id,
+      timestamp,
+      date: dateStr,
+      trigger,
+      operatorName: effectiveOperator,
+      operatorRole: currentUser?.role || 'porteiro',
+      condoId: condo.id,
+      condoName: condo.name,
+      shiftTurn: currentUser?.shiftTurn,
+      notes:
+        notes ||
+        `Backup gerado via ${
+          trigger === 'shift_handover'
+            ? 'Fechamento de Turno'
+            : trigger === 'daily_auto'
+            ? 'Rotina Diária Automática'
+            : 'Solicitação Manual'
+        }.`,
+      counts: {
+        occurrences: occurrences.length,
+        accessLogs: accessLogs.length,
+        visitors: visitors.length,
+        deliveries: deliveries.length,
+        shifts: shifts.length,
+      },
+      data: {
+        occurrences,
+        accessLogs,
+        visitors,
+        deliveries,
+        shifts,
+        fullBackup: fullState,
+      },
+      downloaded: false,
+    };
+
+    const cleanCondo = condo.name.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 20);
+    const filename = `backup_portaria_${cleanCondo}_${trigger}_${fileTimestamp}.json`;
+    const jsonString = JSON.stringify(snapshot, null, 2);
+    snapshot.fileSizeKb = Math.round((jsonString.length / 1024) * 10) / 10;
+
+    // Check config if forceDownload is requested or defaults to true for shift close
+    const config = this.getBackupConfig();
+    const shouldDownload =
+      forceDownload !== undefined
+        ? forceDownload
+        : trigger === 'shift_handover'
+        ? config.forceDownloadOnShiftClose
+        : false;
+
+    if (shouldDownload) {
+      const downloadedOk = this.triggerBrowserDownload(filename, jsonString);
+      snapshot.downloaded = downloadedOk;
+    }
+
+    // Save snapshot in browser localStorage
+    this.saveBackupSnapshot(snapshot);
+
+    // Update config lastDailyBackupDate
+    if (trigger === 'daily_auto' || trigger === 'shift_handover') {
+      const currentConf = this.getBackupConfig();
+      currentConf.lastDailyBackupDate = dateStr;
+      this.setItem(STORAGE_KEYS.BACKUP_CONFIG, currentConf);
+    }
+
+    this.addAuditLog(
+      'Backup Automático',
+      'Segurança',
+      `Snapshot (${trigger}) salvo: ${occurrences.length} ocorrências e ${accessLogs.length} acessos gravados localmente.${
+        shouldDownload ? ' Download forçado do arquivo executado.' : ''
+      }`
+    );
+
+    return snapshot;
+  }
+
+  public downloadSnapshotFile(snapshotOrId: BackupSnapshot | string): boolean {
+    let snapshot: BackupSnapshot | undefined;
+    if (typeof snapshotOrId === 'string') {
+      snapshot = this.getBackupSnapshots().find((s) => s.id === snapshotOrId);
+    } else {
+      snapshot = snapshotOrId;
+    }
+
+    if (!snapshot) return false;
+
+    const safeDate = snapshot.date.replace(/-/g, '');
+    const cleanCondo = (snapshot.condoName || 'portaria').toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 20);
+    const filename = `snapshot_${cleanCondo}_${snapshot.trigger}_${safeDate}_${snapshot.id.slice(-6)}.json`;
+    const jsonString = JSON.stringify(snapshot, null, 2);
+
+    const ok = this.triggerBrowserDownload(filename, jsonString);
+    if (ok) {
+      snapshot.downloaded = true;
+      this.saveBackupSnapshot(snapshot);
+      this.addAuditLog('Download de Snapshot', 'Segurança', `Arquivo ${filename} baixado.`);
+    }
+    return ok;
+  }
+
+  public restoreBackupSnapshot(
+    snapshotOrId: BackupSnapshot | string,
+    mode: 'full' | 'occurrences_access' = 'full'
+  ): boolean {
+    try {
+      let snapshot: BackupSnapshot | undefined;
+      if (typeof snapshotOrId === 'string') {
+        snapshot = this.getBackupSnapshots().find((s) => s.id === snapshotOrId);
+      } else {
+        snapshot = snapshotOrId;
+      }
+      if (!snapshot) return false;
+
+      if (mode === 'occurrences_access') {
+        if (snapshot.data.occurrences) {
+          this.setItem(this.getScopedKey(STORAGE_KEYS.OCCURRENCES), snapshot.data.occurrences);
+        }
+        if (snapshot.data.accessLogs) {
+          this.setItem(this.getScopedKey(STORAGE_KEYS.ACCESS_LOGS), snapshot.data.accessLogs);
+        }
+      } else {
+        // Full restore
+        if (snapshot.data.fullBackup) {
+          for (const [name, key] of Object.entries(STORAGE_KEYS)) {
+            if (snapshot.data.fullBackup[name] !== undefined) {
+              localStorage.setItem(key, JSON.stringify(snapshot.data.fullBackup[name]));
+            }
+          }
+        } else {
+          if (snapshot.data.occurrences) this.setItem(this.getScopedKey(STORAGE_KEYS.OCCURRENCES), snapshot.data.occurrences);
+          if (snapshot.data.accessLogs) this.setItem(this.getScopedKey(STORAGE_KEYS.ACCESS_LOGS), snapshot.data.accessLogs);
+          if (snapshot.data.visitors) this.setItem(this.getScopedKey(STORAGE_KEYS.VISITORS), snapshot.data.visitors);
+          if (snapshot.data.deliveries) this.setItem(this.getScopedKey(STORAGE_KEYS.DELIVERIES), snapshot.data.deliveries);
+          if (snapshot.data.shifts) this.setItem(this.getScopedKey(STORAGE_KEYS.SHIFT_ENTRIES), snapshot.data.shifts);
+        }
+      }
+
+      this.addAuditLog('Restauração de Snapshot', 'Segurança', `Snapshot ${snapshot.id} restaurado (Modo: ${mode}).`);
+      this.notify();
+      return true;
+    } catch (e) {
+      console.error('[Storage] Error restoring snapshot:', e);
+      return false;
+    }
+  }
+
+  public checkAndRunDailyAutoBackup(): void {
+    try {
+      const config = this.getBackupConfig();
+      if (!config.autoDailySnapshotOnLogin) return;
+
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+
+      if (config.lastDailyBackupDate !== todayStr) {
+        this.createBackupSnapshot(
+          'daily_auto',
+          'Sistema Automático',
+          false,
+          'Snapshot diário de segurança gravado no armazenamento local do navegador.'
+        );
+      }
+    } catch (e) {
+      console.warn('[Storage] Failed daily auto backup check', e);
+    }
+  }
+
   // Backup & Restore
   public exportBackupJSON(): string {
     const fullState: Record<string, unknown> = {};
@@ -2116,9 +2397,11 @@ class StorageService {
   public importBackupJSON(jsonStr: string): boolean {
     try {
       const parsed = JSON.parse(jsonStr);
+      // Support either raw fullState or a snapshot object
+      const dataObj = parsed.data?.fullBackup || parsed;
       for (const [name, key] of Object.entries(STORAGE_KEYS)) {
-        if (parsed[name] !== undefined) {
-          localStorage.setItem(key, JSON.stringify(parsed[name]));
+        if (dataObj[name] !== undefined) {
+          localStorage.setItem(key, JSON.stringify(dataObj[name]));
         }
       }
       this.addAuditLog('Restauração de Backup', 'Sistema', 'Backup do sistema restaurado com sucesso.');

@@ -86,10 +86,14 @@ export const VisitorsView: React.FC<VisitorsViewProps> = ({
       scheduledDate,
       scheduledTime,
       notes,
-      isPreAuthorized,
+      isPreAuthorized: true,
     };
 
     storage.saveVisitor(newVis);
+
+    // Morador autorizou: registra o acesso imediatamente no condomínio
+    onFastCheckIn(newVis.name, 'visitante', newVis.apartmentId, newVis.blockId, newVis.document);
+
     setShowAddModal(false);
   };
 
@@ -180,17 +184,10 @@ export const VisitorsView: React.FC<VisitorsViewProps> = ({
                 </div>
 
                 <div className="mt-3">
-                  {vis.isPreAuthorized ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/40 border border-emerald-800/60 px-2 py-0.5 rounded-full font-medium">
-                      <CheckCircle2 className="w-3 h-3" />
-                      Autorização Prévia Confirmada
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] text-amber-300 bg-amber-950/40 border border-amber-800/60 px-2 py-0.5 rounded-full font-medium">
-                      <Clock className="w-3 h-3" />
-                      Sem autorização prévia
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/40 border border-emerald-800/60 px-2 py-0.5 rounded-full font-medium">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Autorizado pelo Morador
+                  </span>
                 </div>
               </div>
 
@@ -199,9 +196,10 @@ export const VisitorsView: React.FC<VisitorsViewProps> = ({
                 <button
                   onClick={() => handleRequestApproval(vis)}
                   className="flex items-center gap-1 text-xs text-purple-300 hover:text-purple-200 font-semibold"
+                  title="Contatar morador do apartamento via WhatsApp ou interfone"
                 >
                   <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
-                  <span>Avisar Morador</span>
+                  <span>Contatar Apto</span>
                 </button>
 
                 {isObserver ? (
@@ -210,8 +208,9 @@ export const VisitorsView: React.FC<VisitorsViewProps> = ({
                   <button
                     onClick={() => onFastCheckIn(vis.name, 'visitante', vis.apartmentId, vis.blockId, vis.document)}
                     className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow transition-colors"
+                    title="Dar entrada imediata após liberação do apartamento"
                   >
-                    <span>Liberar Entrada</span>
+                    <span>Dar Entrada (Liberado)</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 )}
@@ -345,16 +344,26 @@ export const VisitorsView: React.FC<VisitorsViewProps> = ({
                 />
               </div>
 
+              <div className="p-3.5 bg-purple-950/40 border border-purple-800/50 rounded-xl text-xs text-purple-200 space-y-1.5">
+                <p className="font-bold text-white flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                  Regra de Entrada e Liberação pelo Morador:
+                </p>
+                <p className="text-slate-300 text-[11px] leading-relaxed">
+                  O porteiro realiza o contato prévio com a unidade (interfone ou WhatsApp). Se o morador liberar, o cadastro é concluído e a entrada no condomínio é concedida imediatamente. Se o morador não liberar, o visitante não entra e nenhum cadastro é registrado no sistema.
+                </p>
+              </div>
+
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="checkbox"
                   id="chk-pre"
                   checked={isPreAuthorized}
                   onChange={(e) => setIsPreAuthorized(e.target.checked)}
-                  className="accent-purple-600 rounded"
+                  className="accent-purple-600 rounded cursor-pointer"
                 />
-                <label htmlFor="chk-pre" className="text-slate-200">
-                  Visita com autorização prévia já aprovada pelo morador
+                <label htmlFor="chk-pre" className="text-slate-200 font-medium cursor-pointer">
+                  Morador contatado e autorizou a entrada imediata
                 </label>
               </div>
             </div>
@@ -363,15 +372,15 @@ export const VisitorsView: React.FC<VisitorsViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="px-3 py-1.5 text-xs text-slate-400 hover:text-white"
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg shadow-md transition-colors"
+                className="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded-lg shadow-md transition-colors cursor-pointer"
               >
-                Salvar Visitante
+                Cadastrar e Liberar Entrada
               </button>
             </div>
           </form>

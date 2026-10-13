@@ -44,6 +44,20 @@ export type ActiveTab =
   | 'reports'
   | 'admin';
 
+interface SidebarItem {
+  id: ActiveTab;
+  label: string;
+  icon: any;
+  badge?: string;
+  badgeColor?: string;
+  highlight?: boolean;
+}
+
+interface SidebarSection {
+  label: string;
+  items: SidebarItem[];
+}
+
 interface SidebarProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
@@ -76,7 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     onCloseMobile();
   };
 
-  const navGroups =
+  const navGroups: SidebarSection[] =
     userRole === 'dev'
       ? [
           {
@@ -101,8 +115,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 id: 'access' as ActiveTab,
                 label: 'Controle de Acesso',
                 icon: ShieldCheck,
-                badge: waitingAuthCount > 0 ? `${waitingAuthCount} pend.` : undefined,
-                badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-600/30',
               },
               { id: 'cctv' as ActiveTab, label: 'Câmeras CFTV', icon: Video, highlight: true },
             ],

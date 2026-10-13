@@ -384,9 +384,7 @@ export interface Vehicle {
 export type AccessStatus =
   | 'dentro'
   | 'saiu'
-  | 'aguardando_autorizacao'
   | 'autorizado'
-  | 'recusado'
   | 'cancelado';
 
 export type PersonType =
@@ -646,4 +644,42 @@ export interface CommunicationNotice {
   readCount: number;
   attachments?: string[];
 }
+export type BackupTrigger = 'shift_handover' | 'daily_auto' | 'manual' | 'scheduled';
 
+export interface BackupSnapshot {
+  id: string;
+  timestamp: string;
+  date: string;
+  trigger: BackupTrigger;
+  operatorName: string;
+  operatorRole?: string;
+  condoId: string;
+  condoName: string;
+  shiftTurn?: string;
+  notes?: string;
+  counts: {
+    occurrences: number;
+    accessLogs: number;
+    visitors: number;
+    deliveries: number;
+    shifts: number;
+  };
+  data: {
+    occurrences: Occurrence[];
+    accessLogs: AccessLog[];
+    visitors?: Visitor[];
+    deliveries?: DeliveryItem[];
+    shifts?: ShiftEntry[];
+    fullBackup?: Record<string, unknown>;
+  };
+  downloaded: boolean;
+  fileSizeKb?: number;
+}
+
+export interface BackupConfig {
+  autoSnapshotOnShiftClose: boolean;
+  forceDownloadOnShiftClose: boolean;
+  autoDailySnapshotOnLogin: boolean;
+  maxLocalSnapshots: number;
+  lastDailyBackupDate?: string;
+}

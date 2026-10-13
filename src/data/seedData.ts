@@ -578,8 +578,8 @@ export const SEED_VISITORS: Visitor[] = [
     blockId: 'bloco-b',
     scheduledDate: '2026-09-30',
     scheduledTime: '11:00',
-    notes: 'Chegou sem aviso prévio, aguardando aprovação.',
-    isPreAuthorized: false,
+    notes: 'Liberado pelo morador após confirmação na portaria.',
+    isPreAuthorized: true,
   },
 ];
 
@@ -722,9 +722,11 @@ export const SEED_ACCESS_LOGS: AccessLog[] = [
     blockId: 'bloco-b',
     purpose: 'Visita pessoal',
     entryTime: '2026-09-30 09:50',
-    status: 'aguardando_autorizacao',
+    status: 'dentro',
+    authorizationMethod: 'interfone',
+    authorizedByName: 'Thiago Barreto Mendes',
     operatorName: 'João Pedro da Silva',
-    notes: 'Interfone tocado, aguardando morador atender ou responder WhatsApp.',
+    notes: 'Liberado pelo morador após contato pelo interfone.',
   },
   {
     id: 'acc-5',
