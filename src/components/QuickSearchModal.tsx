@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, User, Car, Package, Shield, Phone, Building, ArrowRight } from 'lucide-react';
+import { Search, X, User, Car, Package, Shield, Phone, Building, ArrowRight, CalendarCheck } from 'lucide-react';
 import { storage } from '../services/storage';
 import { ActiveTab } from './Sidebar';
 
@@ -11,7 +11,7 @@ interface QuickSearchModalProps {
 
 interface SearchResultItem {
   id: string;
-  type: 'morador' | 'veiculo' | 'encomenda' | 'visitante' | 'prestador' | 'apartamento';
+  type: 'morador' | 'veiculo' | 'encomenda' | 'visitante' | 'prestador' | 'apartamento' | 'reserva' | 'area_comum';
   title: string;
   subtitle: string;
   badge: string;
@@ -177,6 +177,47 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({
       }
     });
 
+    // Search Common Areas
+    const commonAreas = storage.getCommonAreas();
+    commonAreas.forEach((a) => {
+      if (
+        a.name.toLowerCase().includes(term) ||
+        a.location.toLowerCase().includes(term) ||
+        a.type.toLowerCase().includes(term)
+      ) {
+        items.push({
+          id: a.id,
+          type: 'area_comum',
+          title: a.name,
+          subtitle: `${a.location} · Capacidade: ${a.rules.maxCapacity} pessoas`,
+          badge: 'Área Comum',
+          tab: 'bookings',
+          detail: `Limpeza: R$ ${a.rules.cleaningFee} · Silêncio: ${a.rules.soundCurfewHour}`,
+        });
+      }
+    });
+
+    // Search Bookings
+    const bookings = storage.getBookings();
+    bookings.forEach((b) => {
+      if (
+        b.protocolNumber.toLowerCase().includes(term) ||
+        b.areaName.toLowerCase().includes(term) ||
+        b.residentName.toLowerCase().includes(term) ||
+        b.apartmentNumber.toLowerCase().includes(term)
+      ) {
+        items.push({
+          id: b.id,
+          type: 'reserva',
+          title: `Reserva ${b.protocolNumber}: ${b.areaName}`,
+          subtitle: `Apt ${b.apartmentNumber} (${b.residentName}) · ${b.bookingDate}`,
+          badge: 'Reserva',
+          tab: 'bookings',
+          detail: `${b.slotLabel} · Status: ${b.status.toUpperCase()}`,
+        });
+      }
+    });
+
     setResults(items);
   };
 
@@ -244,6 +285,9 @@ export const QuickSearchModal: React.FC<QuickSearchModalProps> = ({
                       {item.type === 'encomenda' && <Package className="w-4 h-4 text-amber-400" />}
                       {item.type === 'visitante' && <User className="w-4 h-4 text-purple-400" />}
                       {item.type === 'prestador' && <Shield className="w-4 h-4 text-teal-400" />}
+                      {(item.type === 'reserva' || item.type === 'area_comum') && (
+                        <CalendarCheck className="w-4 h-4 text-amber-400" />
+                      )}
                     </div>
 
                     <div className="truncate">

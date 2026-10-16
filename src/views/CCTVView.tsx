@@ -333,7 +333,7 @@ export const CCTVView: React.FC<CCTVViewProps> = ({ onAttachSnapshotToOccurrence
         return;
       }
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: { ideal: 'environment' } },
         audio: false,
       });
       setWebcamStream(mediaStream);

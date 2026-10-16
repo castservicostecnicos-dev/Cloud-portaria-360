@@ -16,6 +16,7 @@ import {
   ArrowUpRight,
   ExternalLink,
   Eye,
+  CalendarCheck,
 } from 'lucide-react';
 import { storage } from '../services/storage';
 import { AccessLog, DeliveryItem, Occurrence, Vehicle, User } from '../types';
@@ -197,6 +198,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
 
             <button
+              onClick={() => onNavigateTab('bookings')}
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
+            >
+              <CalendarCheck className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-amber-400 group-hover:scale-110 transition-transform" />
+              <span className="text-xs font-bold tracking-wide">Reservas</span>
+            </button>
+
+            <button
               onClick={() => onNavigateTab('admin')}
               className="flex flex-col items-center justify-center p-3 sm:p-4 bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white rounded-xl shadow-lg shadow-indigo-950/30 transition-all group min-w-0 text-center"
             >
@@ -258,6 +267,15 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             >
               <Building className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-emerald-400 group-hover:scale-110 transition-transform" />
               <span className="text-xs font-bold tracking-wide">Ficha Apt</span>
+            </button>
+
+            {/* Action 7: Reservas de Lazer */}
+            <button
+              onClick={() => onNavigateTab('bookings')}
+              className="flex flex-col items-center justify-center p-3 sm:p-4 bg-slate-800 hover:bg-slate-750 active:scale-[0.98] border border-slate-700 text-white rounded-xl shadow transition-all group min-w-0 text-center"
+            >
+              <CalendarCheck className="w-5 h-5 sm:w-6 sm:h-6 mb-1 text-amber-400 group-hover:scale-110 transition-transform" />
+              <span className="text-xs font-bold tracking-wide">Reservas</span>
             </button>
           </div>
         )}

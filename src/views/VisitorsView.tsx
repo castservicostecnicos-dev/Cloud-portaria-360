@@ -222,23 +222,23 @@ export const VisitorsView: React.FC<VisitorsViewProps> = ({
 
       {/* Add Visitor Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
           <form
             onSubmit={handleCreateVisitor}
-            className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col"
+            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] overflow-hidden"
           >
-            <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+            <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between shrink-0 sticky top-0 z-20">
               <h3 className="text-sm font-semibold text-white">Cadastrar Autorização de Visitante</h3>
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-white text-xs"
+                className="text-slate-400 hover:text-white text-xs cursor-pointer"
               >
                 Cancelar
               </button>
             </div>
 
-            <div className="p-5 space-y-3.5 text-xs max-h-[75vh] overflow-y-auto">
+            <div className="p-5 space-y-3.5 text-xs overflow-y-auto flex-1 overscroll-contain">
               <div>
                 <label className="block text-slate-300 font-medium mb-1">Nome Completo do Visitante *</label>
                 <input
@@ -368,7 +368,7 @@ export const VisitorsView: React.FC<VisitorsViewProps> = ({
               </div>
             </div>
 
-            <div className="px-5 py-3.5 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-2 shrink-0 sticky bottom-0 z-20">
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}

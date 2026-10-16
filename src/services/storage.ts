@@ -27,6 +27,15 @@ import {
   BackupSnapshot,
   BackupConfig,
   BackupTrigger,
+  CommonArea,
+  AreaBooking,
+  CommonAreaRule,
+  BookingTimeSlot,
+  BookingStatus,
+  NoticeTemplate,
+  ResidentMessage,
+  ResidentMessageStatus,
+  ResidentInvite,
 } from '../types';
 
 export const DEMO_PERSONAS: DemoPersona[] = [
@@ -93,6 +102,11 @@ import {
   SEED_WHATSAPP_TEMPLATES,
   SEED_CCTV_CAMERAS,
   SEED_COMMUNICATION_NOTICES,
+  SEED_COMMON_AREAS,
+  SEED_BOOKINGS,
+  SEED_NOTICE_TEMPLATES,
+  SEED_RESIDENT_MESSAGES,
+  SEED_RESIDENT_INVITES,
 } from '../data/seedData';
 import { firestoreSync } from './firestoreSync';
 
@@ -123,6 +137,11 @@ const STORAGE_KEYS = {
   COMMUNICATION_NOTICES: 'portaria360_communication_notices',
   BACKUP_SNAPSHOTS: 'portaria360_backup_snapshots',
   BACKUP_CONFIG: 'portaria360_backup_config',
+  COMMON_AREAS: 'portaria360_common_areas',
+  BOOKINGS: 'portaria360_bookings',
+  NOTICE_TEMPLATES: 'portaria360_notice_templates',
+  RESIDENT_MESSAGES: 'portaria360_resident_messages',
+  RESIDENT_INVITES: 'portaria360_resident_invites',
 };
 
 class StorageService {
@@ -150,6 +169,37 @@ class StorageService {
     if (!localStorage.getItem(STORAGE_KEYS.CLIENT_CONDOS)) {
       localStorage.setItem(STORAGE_KEYS.CLIENT_CONDOS, JSON.stringify(SEED_CLIENT_CONDOS));
     }
+    if (!localStorage.getItem(STORAGE_KEYS.COMMON_AREAS)) {
+      localStorage.setItem(STORAGE_KEYS.COMMON_AREAS, JSON.stringify(SEED_COMMON_AREAS));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.BOOKINGS)) {
+      localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(SEED_BOOKINGS));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.NOTICE_TEMPLATES)) {
+      localStorage.setItem(STORAGE_KEYS.NOTICE_TEMPLATES, JSON.stringify(SEED_NOTICE_TEMPLATES));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.RESIDENT_MESSAGES)) {
+      localStorage.setItem(STORAGE_KEYS.RESIDENT_MESSAGES, JSON.stringify(SEED_RESIDENT_MESSAGES));
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.RESIDENT_INVITES)) {
+      localStorage.setItem(STORAGE_KEYS.RESIDENT_INVITES, JSON.stringify(SEED_RESIDENT_INVITES));
+    }
+
+    // Ensure user-morador-ana is in STORAGE_KEYS.USERS
+    try {
+      const rawUsers = localStorage.getItem(STORAGE_KEYS.USERS);
+      if (rawUsers) {
+        const usersList: User[] = JSON.parse(rawUsers);
+        if (!usersList.some((u) => u.id === 'user-morador-ana')) {
+          const seededMorador = SEED_USERS.find((u) => u.id === 'user-morador-ana');
+          if (seededMorador) {
+            usersList.push(seededMorador);
+            localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(usersList));
+          }
+        }
+      }
+    } catch (_) {}
+
     // Ensure starter structure for seeded client condos
     this.initCondoStarterStructure(SEED_CLIENT_CONDOS[1]); // São Sebastião
 
@@ -277,6 +327,10 @@ class StorageService {
     localStorage.setItem(STORAGE_KEYS.WHATSAPP_TEMPLATES, JSON.stringify(SEED_WHATSAPP_TEMPLATES));
     localStorage.setItem(STORAGE_KEYS.CCTV_CAMERAS, JSON.stringify(SEED_CCTV_CAMERAS));
     localStorage.setItem(STORAGE_KEYS.COMMUNICATION_NOTICES, JSON.stringify(SEED_COMMUNICATION_NOTICES));
+    localStorage.setItem(STORAGE_KEYS.COMMON_AREAS, JSON.stringify(SEED_COMMON_AREAS));
+    localStorage.setItem(STORAGE_KEYS.BOOKINGS, JSON.stringify(SEED_BOOKINGS));
+    localStorage.setItem(STORAGE_KEYS.NOTICE_TEMPLATES, JSON.stringify(SEED_NOTICE_TEMPLATES));
+    localStorage.setItem(STORAGE_KEYS.RESIDENT_MESSAGES, JSON.stringify(SEED_RESIDENT_MESSAGES));
     this.notify();
   }
 
@@ -833,13 +887,19 @@ class StorageService {
     return allUsers.filter((u) => u.condoId === activeCondoId);
   }
 
-  public authenticate(email: string, password: string): { success: boolean; user?: User; message: string } {
+  public authenticate(identifier: string, password: string): { success: boolean; user?: User; message: string } {
     const users = this.getAllUsers();
-    const cleanEmail = email.trim().toLowerCase();
-    const user = users.find((u) => u.email.trim().toLowerCase() === cleanEmail);
+    const cleanId = identifier.trim().toLowerCase();
+    const digitsOnly = identifier.replace(/\D/g, '');
+
+    const user = users.find((u) => {
+      const emailMatch = u.email.trim().toLowerCase() === cleanId;
+      const cpfMatch = u.cpf && (u.cpf.toLowerCase() === cleanId || (digitsOnly.length > 5 && u.cpf.replace(/\D/g, '') === digitsOnly));
+      return emailMatch || cpfMatch;
+    });
 
     if (!user) {
-      return { success: false, message: 'Usuário não encontrado com este e-mail.' };
+      return { success: false, message: 'Usuário não encontrado com este e-mail ou CPF.' };
     }
 
     if (!user.active) {
@@ -848,6 +908,20 @@ class StorageService {
 
     if (user.password && user.password !== password) {
       return { success: false, message: 'Senha incorreta. Verifique suas credenciais.' };
+    }
+
+    // Role Morador: acesso direto ao portal do morador
+    if (user.role === 'morador') {
+      const now = new Date();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      user.lastLogin = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      this.saveUser(user);
+      this.setCurrentUser(user);
+      if (user.condoId) {
+        this.setActiveCondoId(user.condoId);
+      }
+      this.addAuditLog('Login de Morador', 'Autenticação', `Morador(a) ${user.name} (Apt ${user.unitNumber || ''}) logado com sucesso`);
+      return { success: true, user, message: 'Login realizado com sucesso! Bem-vindo(a) ao Portal do Morador.' };
     }
 
     // DEV Master é independente: sem vínculo com condomínio de cliente
@@ -1693,6 +1767,203 @@ class StorageService {
     }
   }
 
+  // Resident Invites & Resident Self-Registration (Convite e Auto-Cadastro de Morador)
+  public getResidentInvites(): ResidentInvite[] {
+    const key = this.getScopedKey(STORAGE_KEYS.RESIDENT_INVITES);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_RESIDENT_INVITES : [];
+    return this.getItem<ResidentInvite[]>(key, defaultValue);
+  }
+
+  public saveResidentInvite(invite: ResidentInvite) {
+    const key = this.getScopedKey(STORAGE_KEYS.RESIDENT_INVITES);
+    const list = this.getResidentInvites();
+    const idx = list.findIndex((i) => i.id === invite.id);
+    if (idx >= 0) list[idx] = invite;
+    else list.push(invite);
+    this.setItem(key, list);
+    this.addAuditLog(
+      'Convite Morador',
+      'Acesso',
+      `Convite para ${invite.residentName} (${invite.unitNumber}) salvo com código ${invite.code}`
+    );
+  }
+
+  public createResidentInvite(data: {
+    residentName: string;
+    phone: string;
+    email?: string;
+    apartmentId: string;
+    blockId: string;
+    unitNumber: string;
+    blockName: string;
+    residentId?: string;
+    expiresInDays?: number;
+  }): ResidentInvite {
+    const currentUser = this.getCurrentUser();
+    const condo = this.getCondo();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const now = new Date();
+    const nowStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + (data.expiresInDays || 14));
+    const expiryStr = `${expiryDate.getFullYear()}-${pad(expiryDate.getMonth() + 1)}-${pad(expiryDate.getDate())} 23:59`;
+
+    // Code format: CONV-101A-9821
+    const cleanUnit = data.unitNumber.replace(/\D/g, '') || 'APT';
+    const blockLetter = data.blockName.replace(/[^a-zA-Z]/g, '').slice(0, 1).toUpperCase() || 'A';
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    const code = `CONV-${cleanUnit}${blockLetter}-${rand}`;
+
+    const newInvite: ResidentInvite = {
+      id: `invite-${Date.now()}`,
+      code,
+      condoId: condo.id,
+      condoName: condo.name,
+      residentName: data.residentName.trim(),
+      email: data.email?.trim() || '',
+      phone: data.phone.trim(),
+      apartmentId: data.apartmentId,
+      blockId: data.blockId,
+      unitNumber: data.unitNumber,
+      blockName: data.blockName,
+      residentId: data.residentId,
+      createdAt: nowStr,
+      expiresAt: expiryStr,
+      status: 'pendente',
+      invitedByUserId: currentUser.id,
+      invitedByName: currentUser.name,
+    };
+
+    this.saveResidentInvite(newInvite);
+    return newInvite;
+  }
+
+  public getResidentInviteByCode(code: string): ResidentInvite | null {
+    const cleanCode = code.trim().toUpperCase();
+    const invites = this.getResidentInvites();
+    return invites.find((i) => i.code.toUpperCase() === cleanCode) || null;
+  }
+
+  public cancelResidentInvite(inviteId: string) {
+    const list = this.getResidentInvites();
+    const item = list.find((i) => i.id === inviteId);
+    if (item) {
+      item.status = 'cancelado';
+      this.saveResidentInvite(item);
+    }
+  }
+
+  public registerResidentAccount(
+    inviteCode: string,
+    password: string,
+    email?: string,
+    phone?: string,
+    cpf?: string
+  ): { success: boolean; user?: User; message: string } {
+    const cleanCode = inviteCode.trim().toUpperCase();
+    const invite = this.getResidentInviteByCode(cleanCode);
+
+    if (!invite) {
+      return { success: false, message: 'Código de convite não encontrado. Verifique o código recebido da portaria.' };
+    }
+
+    if (invite.status === 'cancelado') {
+      return { success: false, message: 'Este convite foi cancelado pela administração do condomínio.' };
+    }
+
+    if (invite.status === 'aceito') {
+      return { success: false, message: 'Este convite já foi utilizado para ativar uma conta de morador.' };
+    }
+
+    const now = new Date();
+    const expiry = new Date(invite.expiresAt.replace(' ', 'T'));
+    if (!isNaN(expiry.getTime()) && now > expiry) {
+      invite.status = 'expirado';
+      this.saveResidentInvite(invite);
+      return { success: false, message: 'Este convite expirou. Solicite um novo convite à portaria.' };
+    }
+
+    if (!password || password.length < 4) {
+      return { success: false, message: 'A senha deve ter no mínimo 4 caracteres.' };
+    }
+
+    const users = this.getAllUsers();
+    const finalEmail = (
+      email?.trim() ||
+      invite.email?.trim() ||
+      `${invite.unitNumber.toLowerCase()}.${invite.blockName.toLowerCase().replace(/\s+/g, '')}@morador.local`
+    ).toLowerCase();
+
+    // Check if an existing user already has this email
+    const existing = users.find(
+      (u) => u.email.toLowerCase() === finalEmail && u.id !== `user-morador-${invite.id}`
+    );
+    if (existing && existing.role !== 'morador') {
+      return { success: false, message: 'Já existe um usuário com este e-mail no sistema. Escolha outro e-mail.' };
+    }
+
+    const newUser: User = {
+      id: `user-morador-${Date.now()}`,
+      name: invite.residentName,
+      email: finalEmail,
+      password: password,
+      role: 'morador',
+      phone: phone?.trim() || invite.phone,
+      cpf: cpf?.trim(),
+      active: true,
+      condoId: invite.condoId,
+      condoName: invite.condoName,
+      residentId: invite.residentId,
+      apartmentId: invite.apartmentId,
+      blockId: invite.blockId,
+      unitNumber: invite.unitNumber,
+      blockName: invite.blockName,
+      permissions: {
+        canManageUsers: false,
+        canConfigCondo: false,
+        canDeleteRecords: false,
+        canViewReports: false,
+        canManageSettings: false,
+      },
+      lastLogin: new Date().toISOString().slice(0, 16).replace('T', ' '),
+    };
+
+    this.saveUser(newUser);
+
+    // Mark invite as accepted
+    invite.status = 'aceito';
+    invite.acceptedAt = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    invite.acceptedUserId = newUser.id;
+    this.saveResidentInvite(invite);
+
+    // If resident record doesn't have email/phone/cpf, update it
+    if (invite.residentId) {
+      const residents = this.getResidents();
+      const res = residents.find((r) => r.id === invite.residentId);
+      if (res) {
+        if (!res.email && finalEmail) res.email = finalEmail;
+        if (!res.phone && newUser.phone) res.phone = newUser.phone;
+        if (cpf && !res.cpf) res.cpf = cpf;
+        this.saveResident(res);
+      }
+    }
+
+    // Auto login
+    this.setCurrentUser(newUser);
+    this.addAuditLog(
+      'Auto-Cadastro Morador',
+      'Acesso',
+      `Morador(a) ${newUser.name} ativou conta para o Apt ${newUser.unitNumber}`
+    );
+
+    return {
+      success: true,
+      user: newUser,
+      message: 'Conta de morador cadastrada com sucesso! Bem-vindo(a) ao condomínio.',
+    };
+  }
+
   // Visitors
   public getVisitors(): Visitor[] {
     const key = this.getScopedKey(STORAGE_KEYS.VISITORS);
@@ -2078,6 +2349,325 @@ class StorageService {
     if (target) {
       this.addAuditLog('Exclusão de Comunicado', 'Comunicação', `Comunicado "${target.title}" removido`);
     }
+  }
+
+  public acknowledgeNotice(noticeId: string, residentId: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.COMMUNICATION_NOTICES);
+    const list = this.getNotices();
+    const notice = list.find((n) => n.id === noticeId);
+    if (!notice) return;
+    const currentAcks = notice.acknowledgedByResidentIds || [];
+    if (!currentAcks.includes(residentId)) {
+      notice.acknowledgedByResidentIds = [...currentAcks, residentId];
+      notice.readCount = (notice.readCount || 0) + 1;
+      this.setItem(key, list);
+    }
+  }
+
+  // Notice Templates (Modelos de Comunicados)
+  public getNoticeTemplates(): NoticeTemplate[] {
+    const key = this.getScopedKey(STORAGE_KEYS.NOTICE_TEMPLATES);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_NOTICE_TEMPLATES : [];
+    return this.getItem<NoticeTemplate[]>(key, defaultValue);
+  }
+
+  public saveNoticeTemplate(template: NoticeTemplate) {
+    const key = this.getScopedKey(STORAGE_KEYS.NOTICE_TEMPLATES);
+    const list = this.getNoticeTemplates();
+    const idx = list.findIndex((t) => t.id === template.id);
+    if (idx >= 0) list[idx] = template;
+    else list.push(template);
+    this.setItem(key, list);
+    this.addAuditLog('Modelo de Comunicado Salvo', 'Comunicação', `Modelo "${template.name}" atualizado/criado`);
+  }
+
+  public deleteNoticeTemplate(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.NOTICE_TEMPLATES);
+    const list = this.getNoticeTemplates();
+    const target = list.find((t) => t.id === id);
+    this.setItem(key, list.filter((t) => t.id !== id));
+    if (target) {
+      this.addAuditLog('Exclusão de Modelo de Comunicado', 'Comunicação', `Modelo "${target.name}" removido`);
+    }
+  }
+
+  // Resident Messages (Fale com a Portaria / Mensagens Bidirecionais)
+  public getResidentMessages(): ResidentMessage[] {
+    const key = this.getScopedKey(STORAGE_KEYS.RESIDENT_MESSAGES);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_RESIDENT_MESSAGES : [];
+    return this.getItem<ResidentMessage[]>(key, defaultValue);
+  }
+
+  public saveResidentMessage(message: ResidentMessage) {
+    const key = this.getScopedKey(STORAGE_KEYS.RESIDENT_MESSAGES);
+    const list = this.getResidentMessages();
+    const idx = list.findIndex((m) => m.id === message.id);
+    if (idx >= 0) list[idx] = message;
+    else list.unshift(message);
+    this.setItem(key, list);
+    this.addAuditLog(
+      idx >= 0 ? 'Mensagem de Morador Atualizada' : 'Nova Mensagem de Morador',
+      'Comunicação',
+      `Mensagem ${message.protocolNumber} do Apt ${message.apartmentNumber} (${message.residentName}) - "${message.subject}"`
+    );
+  }
+
+  public deleteResidentMessage(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.RESIDENT_MESSAGES);
+    const list = this.getResidentMessages();
+    const target = list.find((m) => m.id === id);
+    this.setItem(key, list.filter((m) => m.id !== id));
+    if (target) {
+      this.addAuditLog('Exclusão de Mensagem de Morador', 'Comunicação', `Mensagem ${target.protocolNumber} removida`);
+    }
+  }
+
+  public replyResidentMessage(messageId: string, replyContent: string, senderName: string, senderRole: string) {
+    const list = this.getResidentMessages();
+    const target = list.find((m) => m.id === messageId);
+    if (!target) return;
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const now = new Date();
+    const nowStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    target.replies.push({
+      id: `rep-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      senderName,
+      senderRole,
+      content: replyContent.trim(),
+      createdAt: nowStr,
+    });
+
+    target.updatedAt = nowStr;
+    if (target.status === 'pendente') {
+      target.status = 'em_atendimento';
+    }
+    if (senderRole === 'porteiro' || senderRole === 'admin') {
+      target.operatorAssigned = senderName;
+    }
+
+    this.saveResidentMessage(target);
+  }
+
+  public updateResidentMessageStatus(messageId: string, status: ResidentMessageStatus) {
+    const list = this.getResidentMessages();
+    const target = list.find((m) => m.id === messageId);
+    if (!target) return;
+
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const now = new Date();
+    const nowStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    target.status = status;
+    target.updatedAt = nowStr;
+    if (status === 'finalizada') {
+      target.resolvedAt = nowStr;
+    }
+
+    this.saveResidentMessage(target);
+  }
+
+  // ==========================================
+  // COMMON AREAS & BOOKINGS (ÁREAS COMUNS & RESERVAS)
+  // ==========================================
+
+  public getCommonAreas(): CommonArea[] {
+    const key = this.getScopedKey(STORAGE_KEYS.COMMON_AREAS);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_COMMON_AREAS : [];
+    return this.getItem<CommonArea[]>(key, defaultValue);
+  }
+
+  public saveCommonArea(area: CommonArea) {
+    const key = this.getScopedKey(STORAGE_KEYS.COMMON_AREAS);
+    const list = this.getCommonAreas();
+    const idx = list.findIndex((a) => a.id === area.id);
+    if (idx >= 0) {
+      list[idx] = area;
+    } else {
+      list.push(area);
+    }
+    this.setItem(key, list);
+    this.addAuditLog(
+      idx >= 0 ? 'Área Comum Atualizada' : 'Nova Área Comum Criada',
+      'Áreas Comuns',
+      `Área "${area.name}" (${area.type}) salva com sucesso.`
+    );
+  }
+
+  public deleteCommonArea(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.COMMON_AREAS);
+    const list = this.getCommonAreas();
+    const target = list.find((a) => a.id === id);
+    this.setItem(key, list.filter((a) => a.id !== id));
+    if (target) {
+      this.addAuditLog('Exclusão de Área Comum', 'Áreas Comuns', `Área "${target.name}" removida do condomínio.`);
+    }
+  }
+
+  public getBookings(): AreaBooking[] {
+    const key = this.getScopedKey(STORAGE_KEYS.BOOKINGS);
+    const defaultValue = this.getActiveCondoId() === 'condo-solar-palmeiras' ? SEED_BOOKINGS : [];
+    return this.getItem<AreaBooking[]>(key, defaultValue);
+  }
+
+  public saveBooking(booking: AreaBooking) {
+    const key = this.getScopedKey(STORAGE_KEYS.BOOKINGS);
+    const list = this.getBookings();
+    const idx = list.findIndex((b) => b.id === booking.id);
+    if (idx >= 0) {
+      list[idx] = booking;
+    } else {
+      list.unshift(booking);
+    }
+    this.setItem(key, list);
+    this.addAuditLog(
+      idx >= 0 ? 'Reserva Atualizada' : 'Nova Reserva Registrada',
+      'Reservas',
+      `Reserva ${booking.protocolNumber} (${booking.areaName}) para Apt ${booking.apartmentNumber} em ${booking.bookingDate} [Status: ${booking.status}]`
+    );
+  }
+
+  public deleteBooking(id: string) {
+    const key = this.getScopedKey(STORAGE_KEYS.BOOKINGS);
+    const list = this.getBookings();
+    const target = list.find((b) => b.id === id);
+    this.setItem(key, list.filter((b) => b.id !== id));
+    if (target) {
+      this.addAuditLog('Exclusão de Reserva', 'Reservas', `Reserva ${target.protocolNumber} (${target.areaName}) excluída.`);
+    }
+  }
+
+  public updateBookingStatus(
+    bookingId: string,
+    status: BookingStatus,
+    adminNotes?: string,
+    approvedBy?: string
+  ) {
+    const bookings = this.getBookings();
+    const target = bookings.find((b) => b.id === bookingId);
+    if (!target) return;
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const nowStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+
+    target.status = status;
+    if (adminNotes !== undefined) target.adminNotes = adminNotes;
+    if (status === 'confirmada') {
+      target.approvedAt = nowStr;
+      target.approvedBy = approvedBy || this.getCurrentUser().name;
+    } else if (status === 'cancelada' || status === 'rejeitada') {
+      target.cancelledAt = nowStr;
+      target.cancelledBy = approvedBy || this.getCurrentUser().name;
+    }
+    this.saveBooking(target);
+  }
+
+  public checkAreaAvailability(
+    areaId: string,
+    date: string,
+    slotId?: string,
+    excludeBookingId?: string
+  ): { available: boolean; conflictReason?: string } {
+    const area = this.getCommonAreas().find((a) => a.id === areaId);
+    if (!area) return { available: false, conflictReason: 'Área comum não encontrada.' };
+    if (area.status === 'manutencao') {
+      return { available: false, conflictReason: `Área em manutenção: ${area.maintenanceReason || 'Interditada temporariamente'}` };
+    }
+    if (area.status === 'inativo') {
+      return { available: false, conflictReason: 'Esta área não está disponível para reservas.' };
+    }
+
+    // Check day of week
+    if (area.rules?.allowedDays && area.rules.allowedDays.length > 0) {
+      const dayOfWeek = new Date(date + 'T12:00:00').getDay();
+      if (!area.rules.allowedDays.includes(dayOfWeek)) {
+        return { available: false, conflictReason: 'Esta área não funciona no dia da semana selecionado.' };
+      }
+    }
+
+    const bookings = this.getBookings().filter(
+      (b) =>
+        b.areaId === areaId &&
+        b.bookingDate === date &&
+        b.status !== 'cancelada' &&
+        b.status !== 'rejeitada' &&
+        b.id !== excludeBookingId
+    );
+
+    if (slotId) {
+      const conflict = bookings.find((b) => b.slotId === slotId || b.slotId?.includes('dia'));
+      if (conflict) {
+        return {
+          available: false,
+          conflictReason: `Horário já reservado pelo Apt ${conflict.apartmentNumber} (${conflict.residentName}).`,
+        };
+      }
+      if (slotId.includes('dia') && bookings.length > 0) {
+        return {
+          available: false,
+          conflictReason: `A área já possui reservas parciais neste dia (${bookings.map((b) => b.slotLabel).join(', ')}).`,
+        };
+      }
+    } else if (bookings.length > 0) {
+      return {
+        available: false,
+        conflictReason: `Área já possui reserva confirmada nesta data.`,
+      };
+    }
+
+    return { available: true };
+  }
+
+  public getAvailableSlotsForDate(areaId: string, date: string): { slot: BookingTimeSlot; isAvailable: boolean; bookedBy?: string; booking?: AreaBooking }[] {
+    const area = this.getCommonAreas().find((a) => a.id === areaId);
+    if (!area || !area.rules?.availableSlots) return [];
+
+    const activeBookings = this.getBookings().filter(
+      (b) =>
+        b.areaId === areaId &&
+        b.bookingDate === date &&
+        b.status !== 'cancelada' &&
+        b.status !== 'rejeitada'
+    );
+
+    const hasFullDayBooking = activeBookings.some((b) => b.slotId?.includes('dia'));
+
+    return area.rules.availableSlots.map((slot) => {
+      if (hasFullDayBooking) {
+        const fullDayBooking = activeBookings.find((b) => b.slotId?.includes('dia'));
+        return {
+          slot,
+          isAvailable: false,
+          bookedBy: `Apt ${fullDayBooking?.apartmentNumber} (${fullDayBooking?.residentName})`,
+          booking: fullDayBooking,
+        };
+      }
+
+      const matchingBooking = activeBookings.find((b) => b.slotId === slot.id);
+      if (matchingBooking) {
+        return {
+          slot,
+          isAvailable: false,
+          bookedBy: `Apt ${matchingBooking.apartmentNumber} (${matchingBooking.residentName})`,
+          booking: matchingBooking,
+        };
+      }
+
+      // If this slot is full day, but other partial bookings exist
+      if (slot.id.includes('dia') && activeBookings.length > 0) {
+        return {
+          slot,
+          isAvailable: false,
+          bookedBy: 'Conflito com turnos parciais já reservados',
+        };
+      }
+
+      return {
+        slot,
+        isAvailable: true,
+      };
+    });
   }
 
   // Audit Logs

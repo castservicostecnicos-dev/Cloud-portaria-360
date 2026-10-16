@@ -620,9 +620,10 @@ export const AccessControlView: React.FC<AccessControlViewProps> = ({ onTriggerW
                   <button
                     type="button"
                     onClick={() => setShowCamera(true)}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-medium border border-slate-700 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
                   >
-                    Capturar
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Tirar Foto (Traseira)</span>
                   </button>
                 )}
               </div>
@@ -655,7 +656,8 @@ export const AccessControlView: React.FC<AccessControlViewProps> = ({ onTriggerW
         isOpen={showCamera}
         onClose={() => setShowCamera(false)}
         onCapture={(img) => setCapturedPhoto(img)}
-        title="Capturar Foto do Visitante ou Documento"
+        title="Foto de Identificação / Documento"
+        defaultFacingMode="environment"
       />
     </div>
   );

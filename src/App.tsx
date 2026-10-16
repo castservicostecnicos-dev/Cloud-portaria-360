@@ -21,6 +21,7 @@ import { AccessControlView } from './views/AccessControlView';
 import { CCTVView } from './views/CCTVView';
 import { DeliveriesView } from './views/DeliveriesView';
 import { NoticesView } from './views/NoticesView';
+import { BookingsView } from './views/BookingsView';
 import { VisitorsView } from './views/VisitorsView';
 import { ContractorsView } from './views/ContractorsView';
 import { PublicAgentsView } from './views/PublicAgentsView';
@@ -32,6 +33,8 @@ import { OtherControlsView } from './views/OtherControlsView';
 import { ReportsView } from './views/ReportsView';
 import { AdminSettingsView } from './views/AdminSettingsView';
 import { DevMasterView } from './views/DevMasterView';
+import { ResidentDashboardView } from './views/ResidentDashboardView';
+import { ResidentNavHeader } from './components/ResidentNavHeader';
 
 export default function App() {
   const initialUser = storage.getCurrentUser();
@@ -57,6 +60,7 @@ export default function App() {
   const [pendingDeliveriesCount, setPendingDeliveriesCount] = useState(0);
   const [openOccurrencesCount, setOpenOccurrencesCount] = useState(0);
   const [waitingAuthCount, setWaitingAuthCount] = useState(0);
+  const [pendingBookingsCount, setPendingBookingsCount] = useState(0);
 
   const refreshBadges = () => {
     const user = storage.getCurrentUser();
@@ -70,6 +74,9 @@ export default function App() {
     const ocos = storage.getOccurrences();
     setOpenOccurrencesCount(ocos.filter((o) => o.status === 'aberta' || o.status === 'em_analise').length);
 
+    const bks = storage.getBookings();
+    setPendingBookingsCount(bks.filter((b) => b.status === 'pendente_aprovacao').length);
+
     const logs = storage.getAccessLogs();
     setWaitingAuthCount(0);
   };
@@ -80,17 +87,25 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Keyboard shortcut for Cmd+K / Ctrl+K
+  // Keyboard shortcut for Cmd+K / Ctrl+K (apenas portaria e gestão)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        if (currentUser.role === 'morador') return;
         e.preventDefault();
         setIsSearchOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  }, [currentUser.role]);
+
+  // Enforce strict boundary for morador: Dashboard do Morador + the 3 authorized sessions
+  useEffect(() => {
+    if (currentUser.role === 'morador' && !['dashboard', 'bookings', 'notices', 'occurrences'].includes(activeTab)) {
+      setActiveTab('dashboard');
+    }
+  }, [currentUser.role, activeTab]);
 
   const handleOpenWhatsApp = (payload: WhatsAppPayload) => {
     setWhatsAppPayload(payload);
@@ -152,6 +167,8 @@ export default function App() {
           refreshBadges();
           if (user.role === 'dev') {
             setActiveTab('dev_master');
+          } else if (user.role === 'morador') {
+            setActiveTab('bookings');
           } else {
             setActiveTab('dashboard');
           }
@@ -160,12 +177,25 @@ export default function App() {
     );
   }
 
+  const handleTabChange = (tab: ActiveTab) => {
+    setActiveTab(tab);
+    const mainEl = document.getElementById('main-content');
+    if (mainEl) {
+      mainEl.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col antialiased w-full max-w-full overflow-x-hidden">
+    <div className="h-screen h-[100dvh] max-h-screen max-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col antialiased w-full max-w-full overflow-hidden">
       {/* Top Header */}
       <Header
-        onOpenSearch={() => setIsSearchOpen(true)}
-        onOpenShiftHandover={() => setIsShiftModalOpen(true)}
+        onOpenSearch={() => {
+          if (currentUser.role !== 'morador') setIsSearchOpen(true);
+        }}
+        onOpenShiftHandover={() => {
+          if (currentUser.role !== 'morador') setIsShiftModalOpen(true);
+        }}
         onToggleSidebarMobile={() => setIsSidebarMobileOpen((prev) => !prev)}
         onOpenLogin={() => setIsLoginModalOpen(true)}
         onLogout={handleLogout}
@@ -173,35 +203,61 @@ export default function App() {
           refreshBadges();
           if (user.role === 'dev') {
             setActiveTab('dev_master');
+          } else if (user.role === 'morador') {
+            setActiveTab('bookings');
           } else if (activeTab === 'dev_master' || activeTab === 'dev_demo') {
             setActiveTab('dashboard');
           }
         }}
       />
 
-      <div className="flex-1 flex overflow-hidden w-full max-w-full">
+      <div className="flex-1 flex min-h-0 overflow-hidden w-full max-w-full relative">
         {/* Navigation Sidebar */}
         <Sidebar
           activeTab={activeTab}
-          setActiveTab={(tab) => {
-            setActiveTab(tab);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
+          setActiveTab={handleTabChange}
           isOpenMobile={isSidebarMobileOpen}
           onCloseMobile={() => setIsSidebarMobileOpen(false)}
           userRole={currentUser.role}
           pendingDeliveriesCount={pendingDeliveriesCount}
           openOccurrencesCount={openOccurrencesCount}
           waitingAuthCount={waitingAuthCount}
+          pendingBookingsCount={pendingBookingsCount}
           onLogout={handleLogout}
           onOpenShiftHandover={() => setIsShiftModalOpen(true)}
         />
 
         {/* Main Content Workspace */}
-        <main className={`flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto w-full min-w-0 ${currentUser.role === 'dev' ? 'pb-6 lg:pb-8' : 'pb-20 lg:pb-8'}`}>
+        <main
+          id="main-content"
+          className={`flex-1 overflow-y-auto overflow-x-hidden min-h-0 p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto w-full ${currentUser.role === 'dev' || currentUser.role === 'morador' ? 'pb-8' : 'pb-24 lg:pb-8'}`}
+        >
 
           {currentUser.role === 'dev' ? (
             <DevMasterView onOpenWhatsApp={handleOpenWhatsApp} />
+          ) : currentUser.role === 'morador' ? (
+            <>
+              {activeTab !== 'dashboard' && (
+                <ResidentNavHeader
+                  activeTab={activeTab}
+                  onNavigateTab={(tab) => setActiveTab(tab)}
+                  pendingBookingsCount={pendingBookingsCount}
+                  pendingDeliveriesCount={pendingDeliveriesCount}
+                  openOccurrencesCount={openOccurrencesCount}
+                />
+              )}
+              {activeTab === 'dashboard' && (
+                <ResidentDashboardView onNavigateTab={(tab) => setActiveTab(tab)} />
+              )}
+              {activeTab === 'bookings' && <BookingsView onTriggerWhatsApp={handleOpenWhatsApp} />}
+              {activeTab === 'notices' && <NoticesView onTriggerWhatsApp={handleOpenWhatsApp} />}
+              {activeTab === 'occurrences' && (
+                <OccurrencesView
+                  initialSnapshot={snapshotForOccurrence}
+                  onClearSnapshot={() => setSnapshotForOccurrence(null)}
+                />
+              )}
+            </>
           ) : (
             <>
               {activeTab === 'dashboard' && (
@@ -244,7 +300,9 @@ export default function App() {
                 />
               )}
 
-              {activeTab === 'notices' && <NoticesView />}
+              {activeTab === 'notices' && <NoticesView onTriggerWhatsApp={handleOpenWhatsApp} />}
+
+              {activeTab === 'bookings' && <BookingsView onTriggerWhatsApp={handleOpenWhatsApp} />}
 
               {activeTab === 'visitors' && (
                 <VisitorsView
@@ -293,19 +351,21 @@ export default function App() {
 
       {/* Global Interactive Modals */}
       <QuickSearchModal
-        isOpen={isSearchOpen}
+        isOpen={isSearchOpen && currentUser.role !== 'morador'}
         onClose={() => setIsSearchOpen(false)}
         onSelectResult={handleSelectSearchResult}
       />
 
       <ShiftHandoverModal
-        isOpen={isShiftModalOpen}
+        isOpen={isShiftModalOpen && currentUser.role !== 'morador'}
         onClose={() => setIsShiftModalOpen(false)}
         onTurnoCompleted={() => refreshBadges()}
         onUserChanged={(newUser) => {
           refreshBadges();
           if (newUser.role === 'dev') {
             setActiveTab('dev_master');
+          } else if (newUser.role === 'morador') {
+            setActiveTab('bookings');
           } else {
             setActiveTab('dashboard');
           }
@@ -334,14 +394,11 @@ export default function App() {
         />
       )}
 
-      {/* Mobile Fixed Bottom Navigation Bar - Only for portaria/operators, NEVER for Dev */}
-      {currentUser.role !== 'dev' && (
+      {/* Mobile Fixed Bottom Navigation Bar - Only for portaria/operators, NEVER for Dev or Morador */}
+      {currentUser.role !== 'dev' && currentUser.role !== 'morador' && (
         <nav className="fixed bottom-0 left-0 right-0 z-30 bg-slate-900/95 backdrop-blur-md border-t border-slate-800 lg:hidden flex items-center justify-around px-1 py-1 shadow-2xl safe-area-bottom w-full max-w-full">
           <button
-            onClick={() => {
-              setActiveTab('dashboard');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            onClick={() => handleTabChange('dashboard')}
             className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-medium transition-colors ${
               activeTab === 'dashboard'
                 ? 'text-emerald-400 font-semibold'
@@ -353,10 +410,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => {
-              setActiveTab('access');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            onClick={() => handleTabChange('access')}
             className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-medium transition-colors ${
               activeTab === 'access' ? 'text-emerald-400 font-semibold' : 'text-slate-400 hover:text-white'
             }`}
@@ -366,10 +420,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => {
-              setActiveTab('deliveries');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            onClick={() => handleTabChange('deliveries')}
             className={`relative flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-medium transition-colors ${
               activeTab === 'deliveries' ? 'text-indigo-400 font-semibold' : 'text-slate-400 hover:text-white'
             }`}
@@ -386,10 +437,7 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => {
-              setActiveTab('cctv');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
+            onClick={() => handleTabChange('cctv')}
             className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-lg text-[10px] font-medium transition-colors ${
               activeTab === 'cctv' ? 'text-sky-400 font-semibold' : 'text-slate-400 hover:text-white'
             }`}

@@ -1,11 +1,10 @@
 <!doctype html>
 <html lang="pt-BR">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Portaria360 - Gestão de Portaria</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cloudflare portaria 360</title>
     <meta name="description" content="Sistema completo e responsivo para gestão diária de portaria condominial: controle de acessos, moradores, encomendas com WhatsApp, ocorrências e passagem de turno." />
-    <meta property="og:title" content="Portaria360 - Gestão de Portaria" />
+    <meta property="og:title" content="Cloudflare portaria 360" />
     <meta property="og:description" content="Sistema completo e responsivo para gestão diária de portaria condominial: controle de acessos, moradores, encomendas com WhatsApp, ocorrências e passagem de turno." />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/pwa-512x512.png" />
@@ -13,7 +12,22 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Portaria360" />
+    <meta name="apple-mobile-web-app-title" content="Cloudflare portaria 360" />
+    <script>
+      // Gracefully prevent Vite HMR WebSocket errors from bubbling in sandbox iframe environment
+      window.addEventListener('error', function(event) {
+        if (event && (event.message?.includes('WebSocket') || event.filename?.includes('@vite/client'))) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+      window.addEventListener('unhandledrejection', function(event) {
+        if (event && event.reason && String(event.reason).includes('WebSocket')) {
+          event.stopImmediatePropagation();
+          event.preventDefault();
+        }
+      }, true);
+    </script>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />

@@ -82,6 +82,12 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
   }, [initialSnapshot]);
 
   const filteredOccurrences = occurrences.filter((occ) => {
+    if (currentUser.role === 'morador' && currentUser.apartmentId) {
+      const isMine =
+        occ.apartmentId === currentUser.apartmentId || occ.operatorName.includes(currentUser.name);
+      const isGeneral = !occ.apartmentId;
+      if (!isMine && !isGeneral) return false;
+    }
     const matchesSearch =
       occ.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       occ.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -106,20 +112,28 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
     const time = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
     const user = storage.getCurrentUser();
 
+    const isMorador = user.role === 'morador';
+    const effectiveAptId = isMorador ? (user.apartmentId || selectedAptId) : (selectedAptId || undefined);
+    const effectiveBlockId = isMorador ? (user.blockId || selectedBlockId) : (selectedBlockId || undefined);
+    const effectiveOperator = isMorador
+      ? `${user.name} (Morador Apt ${user.unitNumber || ''})`
+      : user.name;
+    const effectiveStatus = isMorador ? 'aberta' : status;
+
     const newOcc: Occurrence = {
       id: `oco-${Date.now()}`,
       date,
       time,
       type,
       location: location.trim(),
-      involvedParties: involvedParties.trim(),
-      apartmentId: selectedAptId || undefined,
-      blockId: selectedBlockId || undefined,
+      involvedParties: involvedParties.trim() || (isMorador ? `Morador ${user.name}` : ''),
+      apartmentId: effectiveAptId,
+      blockId: effectiveBlockId,
       description: description.trim(),
       photos: attachedPhotos.length > 0 ? attachedPhotos : undefined,
-      operatorName: user.name,
-      status,
-      actionTaken: actionTaken.trim() || undefined,
+      operatorName: effectiveOperator,
+      status: effectiveStatus,
+      actionTaken: isMorador ? undefined : (actionTaken.trim() || undefined),
     };
 
     storage.saveOccurrence(newOcc);
@@ -154,12 +168,19 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-rose-400" />
-            <h2 className="text-lg font-bold text-white tracking-tight">Livro de Ocorrências</h2>
+            <h2 className="text-lg font-bold text-white tracking-tight">
+              {currentUser.role === 'morador' ? 'Livro de Ocorrências do Morador' : 'Livro de Ocorrências'}
+            </h2>
           </div>
+          <p className="text-xs text-slate-400 mt-0.5">
+            {currentUser.role === 'morador'
+              ? `Acompanhamento e registro de ocorrências para o Apt ${currentUser.unitNumber || ''} (${currentUser.blockName || 'Torre'})`
+              : 'Registro de incidentes, manutenções, barulho e passagem de plantão da portaria'}
+          </p>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          {onOpenShiftHandover && (
+          {currentUser.role !== 'morador' && onOpenShiftHandover && (
             <button
               onClick={onOpenShiftHandover}
               className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold shadow transition-all cursor-pointer"
@@ -184,32 +205,34 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
         </div>
       </div>
 
-      {/* Sub Tabs: Ocorrências vs Livro de Turno */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 text-xs">
-        <button
-          onClick={() => setActiveTab('occurrences')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer ${
-            activeTab === 'occurrences'
-              ? 'bg-rose-950/60 text-rose-300 border border-rose-800/80 shadow'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-          }`}
-        >
-          <FileText className="w-4 h-4 text-rose-400" />
-          <span>Ocorrências ({occurrences.length})</span>
-        </button>
+      {/* Sub Tabs: Ocorrências vs Livro de Turno (Hidden for morador) */}
+      {currentUser.role !== 'morador' && (
+        <div className="flex items-center gap-2 border-b border-slate-800 pb-2 text-xs">
+          <button
+            onClick={() => setActiveTab('occurrences')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer ${
+              activeTab === 'occurrences'
+                ? 'bg-rose-950/60 text-rose-300 border border-rose-800/80 shadow'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <FileText className="w-4 h-4 text-rose-400" />
+            <span>Ocorrências ({occurrences.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('shifts')}
-          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer ${
-            activeTab === 'shifts'
-              ? 'bg-amber-950/60 text-amber-300 border border-amber-800/80 shadow'
-              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-          }`}
-        >
-          <Clock className="w-4 h-4 text-amber-400" />
-          <span>Passagens de Turno ({shifts.length})</span>
-        </button>
-      </div>
+          <button
+            onClick={() => setActiveTab('shifts')}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold transition-all cursor-pointer ${
+              activeTab === 'shifts'
+                ? 'bg-amber-950/60 text-amber-300 border border-amber-800/80 shadow'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+            }`}
+          >
+            <Clock className="w-4 h-4 text-amber-400" />
+            <span>Passagens de Turno ({shifts.length})</span>
+          </button>
+        </div>
+      )}
 
       {/* TAB 1: OCORRÊNCIAS */}
       {activeTab === 'occurrences' && (
@@ -483,23 +506,23 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
 
       {/* Modal Add Occurrence */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
           <form
             onSubmit={handleCreateOccurrence}
-            className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] overflow-hidden"
           >
-            <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950">
+            <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-950 shrink-0 sticky top-0 z-20">
               <h3 className="text-sm font-semibold text-white">Registrar Nova Ocorrência</h3>
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-white p-1 cursor-pointer"
               >
                 ✕
               </button>
             </div>
 
-            <div className="p-5 overflow-y-auto space-y-4 text-xs">
+            <div className="p-5 overflow-y-auto space-y-4 text-xs flex-1 overscroll-contain">
               {formError && (
                 <div className="p-3 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-200 text-xs flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
@@ -507,7 +530,54 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
+              {currentUser.role === 'morador' ? (
+                <div className="p-3 bg-purple-950/40 border border-purple-500/40 rounded-xl space-y-1">
+                  <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider block">
+                    Unidade do Relator
+                  </span>
+                  <p className="text-white font-bold">
+                    Apt {currentUser.unitNumber || '101'} · {currentUser.blockName || 'Torre A'}
+                  </p>
+                  <p className="text-slate-400 text-[11px]">
+                    Morador(a): {currentUser.name}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 mb-1">Tipo de Ocorrência *</label>
+                    <select
+                      value={type}
+                      onChange={(e) => setType(e.target.value as OccurrenceType)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
+                    >
+                      <option value="barulho">Barulho / Som Alto</option>
+                      <option value="vaga_garagem">Vaga de Garagem</option>
+                      <option value="danos_patrimonio">Dano ao Patrimônio</option>
+                      <option value="animal_estimacao">Animais de Estimação</option>
+                      <option value="seguranca">Segurança / Acesso Suspeito</option>
+                      <option value="mudanca_nao_agendada">Mudança Sem Agendamento</option>
+                      <option value="vazamento">Vazamento / Manutenção</option>
+                      <option value="outros">Outros Incidentes</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1">Status Inicial</label>
+                    <select
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as Occurrence['status'])}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
+                    >
+                      <option value="aberta">Aberta</option>
+                      <option value="em_analise">Em Análise</option>
+                      <option value="resolvida">Resolvida na Hora</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {currentUser.role === 'morador' && (
                 <div>
                   <label className="block text-slate-300 mb-1">Tipo de Ocorrência *</label>
                   <select
@@ -515,81 +585,69 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
                     onChange={(e) => setType(e.target.value as OccurrenceType)}
                     className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
                   >
-                    <option value="barulho">Barulho / Som Alto</option>
-                    <option value="vaga_garagem">Vaga de Garagem</option>
-                    <option value="danos_patrimonio">Dano ao Patrimônio</option>
-                    <option value="animal_estimacao">Animais de Estimação</option>
-                    <option value="seguranca">Segurança / Acesso Suspeito</option>
-                    <option value="mudanca_nao_agendada">Mudança Sem Agendamento</option>
-                    <option value="vazamento">Vazamento / Manutenção</option>
+                    <option value="barulho">Barulho / Som Alto Fora do Horário</option>
+                    <option value="vaga_garagem">Vaga de Garagem Obstruída / Ocupada</option>
+                    <option value="danos_patrimonio">Dano ao Patrimônio / Área Comum</option>
+                    <option value="animal_estimacao">Animais de Estimação Soltos / Sujeira</option>
+                    <option value="seguranca">Segurança / Movimento Suspeito</option>
+                    <option value="vazamento">Vazamento / Problema Hidráulico / Manutenção</option>
                     <option value="outros">Outros Incidentes</option>
                   </select>
                 </div>
-
-                <div>
-                  <label className="block text-slate-300 mb-1">Status Inicial</label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as Occurrence['status'])}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
-                  >
-                    <option value="aberta">Aberta</option>
-                    <option value="em_analise">Em Análise</option>
-                    <option value="resolvida">Resolvida na Hora</option>
-                  </select>
-                </div>
-              </div>
+              )}
 
               <div>
                 <label className="block text-slate-300 mb-1">Local da Ocorrência *</label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Garagem Subsolo 1 - Vaga 42, ou Hall Social"
+                  placeholder="Ex: Garagem Subsolo 1, Corredor do 4º andar, Piscina ou Hall Social"
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-300 mb-1">Bloco Envolvido</label>
-                  <select
-                    value={selectedBlockId}
-                    onChange={(e) => setSelectedBlockId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
-                  >
-                    <option value="">Área Comum (Sem Bloco)</option>
-                    {blocks.map((b) => (
-                      <option key={b.id} value={b.id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 mb-1">Apartamento Envolvido</label>
-                  <select
-                    value={selectedAptId}
-                    onChange={(e) => setSelectedAptId(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
-                  >
-                    <option value="">Nenhum / Área Geral</option>
-                    {apartments
-                      .filter((a) => !selectedBlockId || a.blockId === selectedBlockId)
-                      .map((a) => (
-                        <option key={a.id} value={a.id}>
-                          Apt {a.number}
+              {currentUser.role !== 'morador' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-300 mb-1">Bloco Envolvido</label>
+                    <select
+                      value={selectedBlockId}
+                      onChange={(e) => setSelectedBlockId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
+                    >
+                      <option value="">Área Comum (Sem Bloco)</option>
+                      {blocks.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
                         </option>
                       ))}
-                  </select>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-300 mb-1">Apartamento Envolvido</label>
+                    <select
+                      value={selectedAptId}
+                      onChange={(e) => setSelectedAptId(e.target.value)}
+                      className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
+                    >
+                      <option value="">Nenhum / Área Geral</option>
+                      {apartments
+                        .filter((a) => !selectedBlockId || a.blockId === selectedBlockId)
+                        .map((a) => (
+                          <option key={a.id} value={a.id}>
+                            Apt {a.number}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
-                <label className="block text-slate-300 mb-1">Pessoas ou Moradores Envolvidos</label>
+                <label className="block text-slate-300 mb-1">Pessoas ou Unidades Envolvidas</label>
                 <input
                   type="text"
                   placeholder="Ex: Morador do 402B e prestador da Net"
@@ -611,16 +669,18 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-slate-300 mb-1">Ação Tomada / Desfecho Imediato</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Interfonei para o apto 402B solicitando cessar o barulho, som desligado às 23h15."
-                  value={actionTaken}
-                  onChange={(e) => setActionTaken(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
-                />
-              </div>
+              {currentUser.role !== 'morador' && (
+                <div>
+                  <label className="block text-slate-300 mb-1">Ação Tomada / Desfecho Imediato</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Interfonei para o apto 402B solicitando cessar o barulho, som desligado às 23h15."
+                    value={actionTaken}
+                    onChange={(e) => setActionTaken(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
+                  />
+                </div>
+              )}
 
               {/* Photo evidence */}
               <div>
@@ -632,7 +692,7 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
                     className="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 cursor-pointer"
                   >
                     <Camera className="w-3.5 h-3.5" />
-                    <span>Fotografar com Câmera</span>
+                    <span>Fotografar (Câmera Traseira)</span>
                   </button>
                 </div>
 
@@ -655,7 +715,7 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
               </div>
             </div>
 
-            <div className="px-5 py-3 border-t border-slate-800 bg-slate-950 flex justify-end gap-2 text-xs">
+            <div className="px-5 py-3 border-t border-slate-800 bg-slate-950 flex justify-end gap-2 text-xs shrink-0 sticky bottom-0 z-20">
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
@@ -684,6 +744,7 @@ export const OccurrencesView: React.FC<OccurrencesViewProps> = ({
             setShowCamera(false);
           }}
           title="Fotografar Evidência da Ocorrência"
+          defaultFacingMode="environment"
         />
       )}
     </div>

@@ -547,12 +547,12 @@ export const DeliveriesView: React.FC<DeliveriesViewProps> = ({
 
       {/* New Delivery Modal */}
       {showNewDeliveryModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
           <form
             onSubmit={handleCreateDelivery}
-            className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col"
+            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] overflow-hidden"
           >
-            <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+            <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between shrink-0 sticky top-0 z-20">
               <div className="flex items-center gap-2">
                 <Package className="w-5 h-5 text-indigo-400" />
                 <h3 className="text-sm font-semibold text-white">Receber Nova Encomenda / Objeto</h3>
@@ -560,13 +560,13 @@ export const DeliveriesView: React.FC<DeliveriesViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowNewDeliveryModal(false)}
-                className="text-slate-400 hover:text-white text-xs"
+                className="text-slate-400 hover:text-white text-xs cursor-pointer"
               >
                 Cancelar
               </button>
             </div>
 
-            <div className="p-5 space-y-3.5 text-xs max-h-[75vh] overflow-y-auto">
+            <div className="p-5 space-y-3.5 text-xs overflow-y-auto flex-1 overscroll-contain">
               {/* Type and Apartment */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -794,9 +794,10 @@ export const DeliveriesView: React.FC<DeliveriesViewProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowCamera(true)}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs font-medium border border-slate-700 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors cursor-pointer"
                   >
-                    Tirar Foto
+                    <Camera className="w-3.5 h-3.5" />
+                    <span>Tirar Foto (Traseira)</span>
                   </button>
                 )}
               </div>
@@ -829,7 +830,7 @@ export const DeliveriesView: React.FC<DeliveriesViewProps> = ({
               </div>
             </div>
 
-            <div className="px-5 py-3.5 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-2 shrink-0 sticky bottom-0 z-20">
               <button
                 type="button"
                 onClick={() => setShowNewDeliveryModal(false)}
@@ -851,9 +852,9 @@ export const DeliveriesView: React.FC<DeliveriesViewProps> = ({
 
       {/* Package Pickup Modal with Canvas Signature Pad */}
       {pickupTarget && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col">
-            <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between shrink-0 sticky top-0 z-20">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-400" />
                 <h3 className="text-sm font-semibold text-white">
@@ -862,13 +863,13 @@ export const DeliveriesView: React.FC<DeliveriesViewProps> = ({
               </div>
               <button
                 onClick={() => setPickupTarget(null)}
-                className="text-slate-400 hover:text-white text-xs"
+                className="text-slate-400 hover:text-white text-xs cursor-pointer"
               >
                 Fechar
               </button>
             </div>
 
-            <div className="p-5 space-y-4 text-xs max-h-[75vh] overflow-y-auto">
+            <div className="p-5 space-y-4 text-xs overflow-y-auto flex-1 overscroll-contain">
               <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 space-y-1">
                 <p><strong>Destinatário Original:</strong> {pickupTarget.recipientName}</p>
                 <p><strong>Apartamento:</strong> {pickupTarget.apartmentId.replace('apt-', '').toUpperCase()}</p>
@@ -933,7 +934,7 @@ export const DeliveriesView: React.FC<DeliveriesViewProps> = ({
               )}
             </div>
 
-            <div className="px-5 py-3.5 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-2">
+            <div className="px-5 py-3.5 border-t border-slate-800 bg-slate-950 flex items-center justify-end gap-2 shrink-0 sticky bottom-0 z-20">
               <button
                 type="button"
                 onClick={() => setPickupTarget(null)}
@@ -960,7 +961,8 @@ export const DeliveriesView: React.FC<DeliveriesViewProps> = ({
         isOpen={showCamera}
         onClose={() => setShowCamera(false)}
         onCapture={(img) => setCapturedPhoto(img)}
-        title="Capturar Foto da Encomenda"
+        title="Fotografar Encomenda / Pacote"
+        defaultFacingMode="environment"
       />
     </div>
   );

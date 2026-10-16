@@ -46,12 +46,14 @@ export const Header: React.FC<HeaderProps> = ({
   const [condo, setCondo] = useState(storage.getCondo());
   const [insideCount, setInsideCount] = useState(0);
   const [pendingDeliveriesCount, setPendingDeliveriesCount] = useState(0);
+  const [residentPendingDeliveriesCount, setResidentPendingDeliveriesCount] = useState(0);
   const [currentTime, setCurrentTime] = useState('');
 
   const isDevOrDemo = currentUser.role === 'dev' || currentUser.email === 'ale11062@gmail.com';
 
   const refreshData = () => {
-    setCurrentUser(storage.getCurrentUser());
+    const user = storage.getCurrentUser();
+    setCurrentUser(user);
     setCondo(storage.getCondo());
 
     const accessLogs = storage.getAccessLogs();
@@ -61,6 +63,14 @@ export const Header: React.FC<HeaderProps> = ({
     const dels = storage.getDeliveries();
     const pendingDels = dels.filter((d) => d.status !== 'retirado' && d.status !== 'devolvido').length;
     setPendingDeliveriesCount(pendingDels);
+
+    const resPending = dels.filter(
+      (d) =>
+        (d.apartmentId === user.apartmentId || (user.unitNumber && d.recipientName.includes(user.unitNumber))) &&
+        d.status !== 'retirado' &&
+        d.status !== 'devolvido'
+    ).length;
+    setResidentPendingDeliveriesCount(resPending);
   };
 
   useEffect(() => {
@@ -157,7 +167,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Zone 2: Realtime Operational Status Strip (or DEV Strip) */}
+      {/* Zone 2: Realtime Operational Status Strip (or DEV Strip or Morador Strip) */}
       {currentUser.role === 'dev' ? (
         <div className="hidden md:flex items-center gap-3 text-xs text-purple-300">
           <div className="flex items-center gap-1.5 font-mono-tabular">
@@ -168,6 +178,32 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
             <span className="text-purple-200 font-medium">DEV Master</span>
+          </div>
+        </div>
+      ) : currentUser.role === 'morador' ? (
+        <div className="hidden md:flex items-center gap-4 text-xs text-slate-300">
+          <div className="flex items-center gap-1.5 font-mono-tabular">
+            <Clock className="w-3.5 h-3.5 text-slate-400" />
+            <span className="text-slate-200 font-semibold">{currentTime}</span>
+          </div>
+          <div className="h-4 w-px bg-slate-800" />
+          <div className="flex items-center gap-2">
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400" />
+            <span className="text-white font-medium">
+              Apto <strong className="text-emerald-400 font-bold">{currentUser.unitNumber || '101'}</strong> ({currentUser.blockName || 'Torre Principal'})
+            </span>
+          </div>
+          <div className="h-4 w-px bg-slate-800" />
+          <div>
+            {residentPendingDeliveriesCount > 0 ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-semibold animate-pulse">
+                📦 {residentPendingDeliveriesCount} Encomenda(s) na Portaria
+              </span>
+            ) : (
+              <span className="text-slate-400 text-xs">
+                Sem encomendas pendentes
+              </span>
+            )}
           </div>
         </div>
       ) : (
@@ -203,8 +239,8 @@ export const Header: React.FC<HeaderProps> = ({
         {/* PWA Install Button */}
         <PWAInstallButton />
 
-        {/* Quick Search Button (Portaria & Observador) */}
-        {currentUser.role !== 'dev' && (
+        {/* Quick Search Button (Portaria & Observador - Oculto para Moradores) */}
+        {currentUser.role !== 'dev' && currentUser.role !== 'morador' && (
           <button
             onClick={onOpenSearch}
             className="flex items-center gap-1.5 p-1.5 sm:px-3 sm:py-1.5 text-xs text-slate-300 bg-slate-950 hover:bg-slate-800 border border-slate-700/80 rounded-lg transition-colors group shrink-0"
@@ -218,8 +254,8 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* Turn Handover Button (Apenas Portaria / Operadores - Dev Master não faz turno) */}
-        {currentUser.role !== 'dev' && (
+        {/* Turn Handover Button (Apenas Portaria / Operadores - Oculto para Morador e Dev Master) */}
+        {currentUser.role !== 'dev' && currentUser.role !== 'morador' && (
           <button
             onClick={onOpenShiftHandover}
             className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-amber-200 bg-amber-950/40 hover:bg-amber-900/60 border border-amber-800/60 rounded-lg transition-colors cursor-pointer"
@@ -244,7 +280,13 @@ export const Header: React.FC<HeaderProps> = ({
                 {currentUser.name.split(' ')[0]}
               </span>
               <span className="text-[10px] text-slate-400 block -mt-0.5 capitalize">
-                {currentUser.role === 'dev' ? 'Dev Master' : currentUser.role === 'admin' ? 'ADM Predial' : currentUser.role}
+                {currentUser.role === 'dev'
+                  ? 'Dev Master'
+                  : currentUser.role === 'morador'
+                  ? 'Morador(a)'
+                  : currentUser.role === 'admin'
+                  ? 'ADM Predial'
+                  : currentUser.role}
               </span>
             </div>
             <ChevronDown className="w-3 h-3 text-slate-400" />
@@ -269,7 +311,7 @@ export const Header: React.FC<HeaderProps> = ({
                   </span>
                 </div>
                 <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded font-mono">
-                  {currentUser.role === 'dev' ? 'DEV MASTER' : 'POSTO ATIVO'}
+                  {currentUser.role === 'dev' ? 'DEV MASTER' : currentUser.role === 'morador' ? 'PORTAL DO MORADOR' : 'POSTO ATIVO'}
                 </span>
               </div>
 
@@ -285,10 +327,24 @@ export const Header: React.FC<HeaderProps> = ({
                       {currentUser.name}
                     </h4>
                     <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded capitalize bg-emerald-950 text-emerald-300 border border-emerald-800 mt-0.5">
-                      {currentUser.role === 'dev' ? 'Dev Master' : currentUser.role === 'admin' ? 'ADM Predial' : currentUser.role === 'supervisor' ? 'Supervisor' : 'Porteiro / Operador'}
+                      {currentUser.role === 'dev'
+                        ? 'Dev Master'
+                        : currentUser.role === 'morador'
+                        ? `Morador · Apt ${currentUser.unitNumber || ''}`
+                        : currentUser.role === 'admin'
+                        ? 'ADM Predial'
+                        : currentUser.role === 'supervisor'
+                        ? 'Supervisor'
+                        : 'Porteiro / Operador'}
                     </span>
 
                     <div className="mt-2 space-y-1 text-[11px] text-slate-400">
+                      {currentUser.role === 'morador' && (
+                        <p className="flex items-center gap-1.5 text-emerald-300 font-semibold truncate">
+                          <Building2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                          <span>Apto {currentUser.unitNumber || ''} - {currentUser.blockName || 'Torre'}</span>
+                        </p>
+                      )}
                       {currentUser.email && (
                         <p className="flex items-center gap-1.5 truncate">
                           <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
@@ -325,7 +381,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               {/* Actions Footer */}
               <div className="p-3 bg-slate-950 space-y-2">
-                {currentUser.role !== 'dev' && (
+                {currentUser.role !== 'dev' && currentUser.role !== 'morador' && (
                   <button
                     type="button"
                     onClick={(e) => {

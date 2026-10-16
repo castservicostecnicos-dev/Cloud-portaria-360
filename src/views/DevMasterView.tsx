@@ -94,6 +94,25 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
     return () => unsub();
   }, []);
 
+  // Lock main scroll when modal is open and ensure restoration
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(
+      isCreateModalOpen || editingCondo || resetPasswordCondo || condoToDelete || viewingPorteirosCondo
+    );
+    const mainEl = document.getElementById('main-content');
+    if (isAnyModalOpen) {
+      if (mainEl) mainEl.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    } else {
+      if (mainEl) mainEl.style.overflow = '';
+      document.body.style.overflow = '';
+    }
+    return () => {
+      if (mainEl) mainEl.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+  }, [isCreateModalOpen, editingCondo, resetPasswordCondo, condoToDelete, viewingPorteirosCondo]);
+
   const triggerFeedback = (message: string, type: 'success' | 'error' = 'success') => {
     setFeedback({ type, message });
     setTimeout(() => setFeedback(null), 3500);
@@ -664,10 +683,10 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
 
       {/* MODAL: CADASTRAR CONDOMÍNIO (DEV CRIA CONDOMÍNIO + ADM PREDIAL) */}
       {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
           <form
             onSubmit={handleSaveNewCondo}
-            className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] overflow-hidden"
           >
             <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -937,10 +956,10 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
 
       {/* MODAL: EDITAR / REGISTRAR CONDOMÍNIO & ADM */}
       {editingCondo && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
           <form
             onSubmit={handleSaveEditCondo}
-            className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-xl shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] overflow-hidden"
           >
             <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1341,9 +1360,9 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
         const condoShifts = calculateShiftsForScale(viewingPorteirosCondo.workScale || '8h_3turnos', viewingPorteirosCondo.workScaleStartHour || '06:00');
 
         return (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
-              <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between">
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-2xl shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between shrink-0 sticky top-0 z-20">
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-sky-400" />
                   <div>
@@ -1364,7 +1383,108 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
                 </button>
               </div>
 
-              <div className="p-4 space-y-4 overflow-y-auto text-xs">
+              <div className="p-4 space-y-4 overflow-y-auto flex-1 overscroll-contain text-xs">
+                {/* Inline form to add porteiro to this condo - placed at TOP so it is immediately visible */}
+                {isAddingPorteiro && (
+                  <form onSubmit={handleCreatePorteiroForCondo} className="p-4 bg-slate-950 border border-emerald-500/80 rounded-xl space-y-3 shadow-lg">
+                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                      <span className="font-bold text-emerald-400 text-xs flex items-center gap-1.5">
+                        <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                        Cadastrar Novo Porteiro para {viewingPorteirosCondo.name}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingPorteiro(false)}
+                        className="text-slate-400 hover:text-white p-1 cursor-pointer"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Live Verification strip */}
+                    <div className="p-2.5 bg-slate-900 border border-emerald-900/60 rounded-lg text-xs space-y-1">
+                      <div className="text-[10px] font-bold text-emerald-400 uppercase flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>Conferência dos Dados do Porteiro em Tempo Real</span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+                        <span>Nome: <strong className={newPorteiroName ? 'text-white' : 'text-slate-500 italic'}>{newPorteiroName || '(preencha o nome)'}</strong></span>
+                        <span>E-mail: <strong className={newPorteiroEmail ? 'text-sky-300 font-mono' : 'text-slate-500 italic'}>{newPorteiroEmail || '(preencha o e-mail)'}</strong></span>
+                        <span>Turno: <strong className={newPorteiroShift ? 'text-amber-300 font-mono' : 'text-amber-500/80 italic'}>{newPorteiroShift || '(selecione o turno)'}</strong></span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-300 font-medium mb-1">Nome Completo *</label>
+                        <input
+                          type="text"
+                          required
+                          value={newPorteiroName}
+                          onChange={(e) => setNewPorteiroName(e.target.value)}
+                          placeholder="Ex: Carlos Eduardo de Oliveira"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-300 font-medium mb-1">E-mail de Acesso *</label>
+                        <input
+                          type="email"
+                          required
+                          value={newPorteiroEmail}
+                          onChange={(e) => setNewPorteiroEmail(e.target.value)}
+                          placeholder="carlos.portaria@condominio.com"
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-300 font-medium mb-1">Senha Inicial</label>
+                        <input
+                          type="text"
+                          value={newPorteiroPassword}
+                          onChange={(e) => setNewPorteiroPassword(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-500 transition-colors"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-300 font-medium mb-1">Turno de Trabalho</label>
+                        <select
+                          value={newPorteiroShift}
+                          onChange={(e) => setNewPorteiroShift(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-emerald-500 transition-colors"
+                        >
+                          <option value="">Selecione o Turno</option>
+                          {condoShifts.map((s) => (
+                            <option key={s.id} value={s.label}>
+                              {s.label} ({s.timeRange})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingPorteiro(false)}
+                        className="px-3 py-1.5 text-slate-400 hover:text-white text-xs font-semibold cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Cadastrar Porteiro</span>
+                      </button>
+                    </div>
+                  </form>
+                )}
+
                 {/* List of Porteiros */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -1421,93 +1541,9 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
                     </div>
                   )}
                 </div>
-
-                {/* Inline form to add porteiro to this condo */}
-                {isAddingPorteiro && (
-                  <form onSubmit={handleCreatePorteiroForCondo} className="p-4 bg-slate-950 border border-sky-800/80 rounded-xl space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <span className="font-semibold text-white text-xs">Novo Porteiro para {viewingPorteirosCondo.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingPorteiro(false)}
-                        className="text-slate-400 hover:text-white"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-slate-300 font-medium mb-1">Nome Completo *</label>
-                        <input
-                          type="text"
-                          required
-                          value={newPorteiroName}
-                          onChange={(e) => setNewPorteiroName(e.target.value)}
-                          placeholder="Ex: Carlos Eduardo"
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-300 font-medium mb-1">E-mail de Acesso *</label>
-                        <input
-                          type="email"
-                          required
-                          value={newPorteiroEmail}
-                          onChange={(e) => setNewPorteiroEmail(e.target.value)}
-                          placeholder="carlos.portaria@condominio.com"
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-slate-300 font-medium mb-1">Senha Inicial</label>
-                        <input
-                          type="text"
-                          value={newPorteiroPassword}
-                          onChange={(e) => setNewPorteiroPassword(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-300 font-medium mb-1">Turno de Trabalho</label>
-                        <select
-                          value={newPorteiroShift}
-                          onChange={(e) => setNewPorteiroShift(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
-                        >
-                          <option value="">Selecione o Turno</option>
-                          {condoShifts.map((s) => (
-                            <option key={s.id} value={s.label}>
-                              {s.label}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-end gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingPorteiro(false)}
-                        className="px-3 py-1.5 text-slate-400 hover:text-white text-xs font-semibold cursor-pointer"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer"
-                      >
-                        Cadastrar Porteiro
-                      </button>
-                    </div>
-                  </form>
-                )}
               </div>
 
-              <div className="px-5 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-end">
+              <div className="px-5 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-end shrink-0 sticky bottom-0 z-20">
                 <button
                   type="button"
                   onClick={() => {

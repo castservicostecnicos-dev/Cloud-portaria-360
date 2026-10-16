@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   HardDrive,
   Eye,
+  EyeOff,
   Archive,
   Save,
   AlertCircle,
@@ -73,6 +74,7 @@ export const AdminSettingsView: React.FC = () => {
   const [canConfigCondo, setCanConfigCondo] = useState(false);
   const [canDeleteRecords, setCanDeleteRecords] = useState(false);
   const [canViewReports, setCanViewReports] = useState(true);
+  const [showPasswordText, setShowPasswordText] = useState(false);
 
   // Template editor modal
   const [editingTemplate, setEditingTemplate] = useState<WhatsAppTemplate | null>(null);
@@ -110,6 +112,23 @@ export const AdminSettingsView: React.FC = () => {
     const unsub = storage.subscribe(refreshData);
     return () => unsub();
   }, []);
+
+  // Lock main scroll when modal is open and ensure restoration
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(showUserModal || editingTemplate || selectedSnapshot);
+    const mainEl = document.getElementById('main-content');
+    if (isAnyModalOpen) {
+      if (mainEl) mainEl.style.overflow = 'hidden';
+      document.body.style.overflow = 'hidden';
+    } else {
+      if (mainEl) mainEl.style.overflow = '';
+      document.body.style.overflow = '';
+    }
+    return () => {
+      if (mainEl) mainEl.style.overflow = '';
+      document.body.style.overflow = '';
+    };
+  }, [showUserModal, editingTemplate, selectedSnapshot]);
 
   const showFeedback = (msg: string) => {
     setFeedbackMsg(msg);
@@ -1727,229 +1746,326 @@ export const AdminSettingsView: React.FC = () => {
         </div>
       )}
 
-      {/* Modal User Edit */}
+      {/* Modal User Edit - Fully stabilized and visible during typing */}
       {showUserModal && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
           <form
             onSubmit={handleSaveUser}
-            className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-md overflow-hidden shadow-2xl p-5 space-y-3.5 text-xs"
+            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] overflow-hidden"
           >
-            <h3 className="text-sm font-semibold text-white">
-              {editingUser ? 'Editar Usuário do Sistema' : 'Novo Usuário do Sistema'}
-            </h3>
-
-            {userRole === 'dev' || userEmail.trim().toLowerCase() === 'ale11062@gmail.com' ? (
-              <div className="p-2.5 rounded-lg bg-purple-950/40 border border-purple-900/60 flex items-center justify-between text-[11px]">
-                <span className="text-purple-300 font-semibold flex items-center gap-1.5">
-                  <Shield className="w-3.5 h-3.5 text-purple-400" />
-                  Dev Master Independente
-                </span>
-                <span className="text-slate-400">Sem vínculo com cliente</span>
+            {/* Sticky Header */}
+            <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between shrink-0 sticky top-0 z-20">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-950/80 border border-emerald-800/80 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Shield className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-bold text-white truncate">
+                    {editingUser ? 'Editar Usuário / Porteiro' : 'Cadastrar Porteiro / Operador'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {editingUser?.condoName || condo.name} • Sistema de Portaria
+                  </p>
+                </div>
               </div>
-            ) : (
-              <div className="p-2.5 rounded-lg bg-slate-950 border border-emerald-900/40 flex items-center justify-between text-[11px]">
-                <span className="text-slate-400">Condomínio Vinculado:</span>
-                <span className="font-semibold text-emerald-400 truncate ml-2">
-                  {editingUser?.condoName || condo.name}
-                </span>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-slate-300 font-medium mb-1">Nome Completo *</label>
-              <input
-                type="text"
-                required
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">E-mail *</label>
-                <input
-                  type="email"
-                  required
-                  value={userEmail}
-                  onChange={(e) => setUserEmail(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
-                />
-              </div>
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Telefone</label>
-                <input
-                  type="text"
-                  value={userPhone}
-                  onChange={(e) => setUserPhone(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Perfil de Acesso</label>
-                <select
-                  value={userRole}
-                  onChange={(e) => setUserRole(e.target.value as any)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
-                >
-                  <option value="porteiro">Porteiro / Operador</option>
-                  <option value="supervisor">Supervisor de Segurança</option>
-                  <option value="admin">Administrador / Síndico</option>
-                  {currentUser.role === 'dev' && (
-                    <option value="dev">Desenvolvedor / Master</option>
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Status da Conta</label>
-                <select
-                  value={userActive ? 'active' : 'inactive'}
-                  onChange={(e) => setUserActive(e.target.value === 'active')}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
-                >
-                  <option value="active">Ativo (Pode Acessar)</option>
-                  <option value="inactive">Desativado / Bloqueado</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Shift Turn Selector for Porteiro */}
-            {userRole === 'porteiro' && (
-              <div className="p-3 bg-slate-950 border border-sky-800/60 rounded-xl space-y-1.5">
-                <label className="block text-sky-300 font-semibold text-xs flex items-center justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-sky-400" />
-                    <span>Turno / Escala de Trabalho do Porteiro</span>
-                  </span>
-                  <span className="text-[10px] text-amber-300 font-mono">
-                    Escala {condo.workScale === '12x36' ? '12h x 36h' : '8h em 3 Turnos'}
-                  </span>
-                </label>
-                <select
-                  value={userShiftTurn}
-                  onChange={(e) => setUserShiftTurn(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-white text-xs"
-                >
-                  <option value="">Selecione o Turno ou Horário de Trabalho</option>
-                  {(calculateShiftsForScale(condo.workScale || '8h_3turnos', condo.workScaleStartHour || '06:00') || []).map((s) => (
-                    <option key={s.id} value={s.label}>
-                      {s.label} ({s.timeRange})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {currentUser.role === 'dev' ? (
-              <div>
-                <label className="block text-slate-300 font-medium mb-1">Senha de Acesso</label>
-                <input
-                  type="text"
-                  placeholder="Defina a senha"
-                  value={userPassword}
-                  onChange={(e) => setUserPassword(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white font-mono"
-                />
-              </div>
-            ) : (
-              <div className="p-2.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-400 text-xs">
-                As credenciais de acesso são gerenciadas e recuperadas pelo Dev Master.
-              </div>
-            )}
-
-            {/* Individual Permissions */}
-            <div className="p-3 bg-slate-950 border border-slate-800 rounded-lg space-y-2">
-              <span className="font-semibold text-slate-300 block">Permissões Individuais:</span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="p-users"
-                  checked={canManageUsers}
-                  onChange={(e) => setCanManageUsers(e.target.checked)}
-                  className="accent-emerald-600 rounded"
-                />
-                <label htmlFor="p-users" className="text-slate-300">Pode cadastrar e editar usuários</label>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="p-condo"
-                  checked={canConfigCondo}
-                  onChange={(e) => setCanConfigCondo(e.target.checked)}
-                  className="accent-emerald-600 rounded"
-                />
-                <label htmlFor="p-condo" className="text-slate-300">Pode configurar regras e dados do condomínio</label>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  id="p-del"
-                  checked={canDeleteRecords}
-                  onChange={(e) => setCanDeleteRecords(e.target.checked)}
-                  className="accent-emerald-600 rounded"
-                />
-                <label htmlFor="p-del" className="text-slate-300">Pode excluir registros históricos</label>
-              </div>
-            </div>
-
-            <div className="pt-2 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowUserModal(false)}
-                className="px-3 py-1.5 text-slate-400 hover:text-white"
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+                title="Fechar"
               >
-                Cancelar
+                <X className="w-4 h-4" />
               </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-lg font-semibold"
-              >
-                Salvar Usuário
-              </button>
+            </div>
+
+            {/* Scrollable Form Body with Real-time Data Verification */}
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-4 flex-1 overscroll-contain text-xs">
+              {/* Live Verification Strip - keeps all entered data clearly visible while typing */}
+              <div className="p-3 bg-slate-950 border border-emerald-900/50 rounded-xl space-y-1.5 shadow-inner">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Conferência dos Dados em Tempo Real</span>
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.5 rounded font-semibold ${userActive ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-rose-950 text-rose-300 border border-rose-800'}`}>
+                    {userActive ? 'Status: Ativo' : 'Status: Inativo'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 text-[11px]">
+                  <div className="truncate">
+                    <span className="text-slate-400">Nome: </span>
+                    <strong className={userName ? 'text-white font-semibold' : 'text-slate-500 italic'}>
+                      {userName || '(Preencha o nome...)'}
+                    </strong>
+                  </div>
+                  <div className="truncate">
+                    <span className="text-slate-400">E-mail: </span>
+                    <strong className={userEmail ? 'text-sky-300 font-mono' : 'text-slate-500 italic'}>
+                      {userEmail || '(Preencha o e-mail...)'}
+                    </strong>
+                  </div>
+                  {userPhone && (
+                    <div className="truncate">
+                      <span className="text-slate-400">Telefone: </span>
+                      <strong className="text-slate-200">{userPhone}</strong>
+                    </div>
+                  )}
+                  {userRole === 'porteiro' && (
+                    <div className="sm:col-span-2 truncate">
+                      <span className="text-slate-400">Turno de Trabalho: </span>
+                      <strong className={userShiftTurn ? 'text-amber-300 font-mono' : 'text-amber-500/80 italic'}>
+                        {userShiftTurn || 'Selecione o turno abaixo'}
+                      </strong>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {userRole === 'dev' || userEmail.trim().toLowerCase() === 'ale11062@gmail.com' ? (
+                <div className="p-2.5 rounded-lg bg-purple-950/40 border border-purple-900/60 flex items-center justify-between text-[11px]">
+                  <span className="text-purple-300 font-semibold flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5 text-purple-400" />
+                    Dev Master Independente
+                  </span>
+                  <span className="text-slate-400">Sem vínculo com condomínio específico</span>
+                </div>
+              ) : (
+                <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">Condomínio Vinculado:</span>
+                  <span className="font-semibold text-emerald-400 truncate ml-2">
+                    {editingUser?.condoName || condo.name}
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">Nome Completo *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Carlos Eduardo de Oliveira"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">E-mail de Acesso *</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="carlos.portaria@condominio.com"
+                    value={userEmail}
+                    onChange={(e) => setUserEmail(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Telefone / WhatsApp</label>
+                  <input
+                    type="text"
+                    placeholder="(11) 98765-4321"
+                    value={userPhone}
+                    onChange={(e) => setUserPhone(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Perfil de Acesso</label>
+                  <select
+                    value={userRole}
+                    onChange={(e) => setUserRole(e.target.value as any)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                  >
+                    <option value="porteiro">Porteiro / Operador da Portaria</option>
+                    <option value="supervisor">Supervisor de Segurança</option>
+                    <option value="admin">Administrador / Síndico</option>
+                    {currentUser.role === 'dev' && (
+                      <option value="dev">Desenvolvedor / Master</option>
+                    )}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1">Status da Conta</label>
+                  <select
+                    value={userActive ? 'active' : 'inactive'}
+                    onChange={(e) => setUserActive(e.target.value === 'active')}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-emerald-500 transition-colors"
+                  >
+                    <option value="active">Ativo (Pode Acessar)</option>
+                    <option value="inactive">Desativado / Bloqueado</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Shift Turn Selector for Porteiro */}
+              {userRole === 'porteiro' && (
+                <div className="p-3 bg-slate-950 border border-sky-800/60 rounded-xl space-y-2">
+                  <label className="block text-sky-300 font-semibold text-xs flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-sky-400" />
+                      <span>Turno / Escala de Trabalho do Porteiro *</span>
+                    </span>
+                    <span className="text-[10px] text-amber-300 font-mono">
+                      Escala {condo.workScale === '12x36' ? '12h x 36h' : '8h em 3 Turnos'}
+                    </span>
+                  </label>
+                  <select
+                    value={userShiftTurn}
+                    onChange={(e) => setUserShiftTurn(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-xs focus:outline-none focus:border-sky-500 transition-colors"
+                  >
+                    <option value="">Selecione o Turno ou Horário de Trabalho</option>
+                    {(calculateShiftsForScale(condo.workScale || '8h_3turnos', condo.workScaleStartHour || '06:00') || []).map((s) => (
+                      <option key={s.id} value={s.label}>
+                        {s.label} ({s.timeRange})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400">
+                    O turno selecionado aparece no cabeçalho e nos relatórios de passagem de plantão do porteiro.
+                  </p>
+                </div>
+              )}
+
+              {/* Password configuration */}
+              <div>
+                <label className="block text-slate-300 font-semibold mb-1">
+                  Senha de Acesso {currentUser.role === 'dev' ? '*' : '(Padrão do Sistema)'}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPasswordText ? 'text' : 'password'}
+                    placeholder={currentUser.role === 'dev' ? 'Defina a senha de acesso' : 'senha123'}
+                    value={userPassword}
+                    onChange={(e) => setUserPassword(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 pr-10 text-white font-mono text-xs focus:outline-none focus:border-emerald-500 transition-colors"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordText(!showPasswordText)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
+                    title={showPasswordText ? 'Ocultar senha' : 'Ver senha'}
+                  >
+                    {showPasswordText ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  {userPassword ? 'Senha preenchida e conferida.' : 'Se vazio, será usada a senha inicial padrão "senha123".'}
+                </p>
+              </div>
+
+              {/* Individual Permissions */}
+              <div className="p-3 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
+                <span className="font-semibold text-slate-300 block text-xs">Permissões de Operação:</span>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={canManageUsers}
+                    onChange={(e) => setCanManageUsers(e.target.checked)}
+                    className="accent-emerald-600 rounded w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-slate-300">Pode cadastrar e editar outros porteiros/usuários</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={canConfigCondo}
+                    onChange={(e) => setCanConfigCondo(e.target.checked)}
+                    className="accent-emerald-600 rounded w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-slate-300">Pode configurar regras e dados do condomínio</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={canDeleteRecords}
+                    onChange={(e) => setCanDeleteRecords(e.target.checked)}
+                    className="accent-emerald-600 rounded w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-slate-300">Pode excluir registros históricos</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Sticky Footer */}
+            <div className="px-5 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between shrink-0 sticky bottom-0 z-20">
+              <div className="text-[11px] text-slate-400 hidden sm:flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                <span>Dados conferidos na tela</span>
+              </div>
+              <div className="flex items-center gap-2 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowUserModal(false)}
+                  className="px-3.5 py-1.5 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs shadow-md transition-colors flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  <span>{editingUser ? 'Salvar Usuário' : 'Cadastrar Porteiro'}</span>
+                </button>
+              </div>
             </div>
           </form>
         </div>
       )}
 
-      {/* Modal Edit Template */}
+      {/* Modal Edit Template - Stabilized */}
       {editingTemplate && (
-        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
           <form
             onSubmit={handleSaveTemplate}
-            className="bg-slate-900 border border-slate-700 rounded-xl w-full max-w-lg overflow-hidden shadow-2xl p-5 space-y-3 text-xs"
+            className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl flex flex-col my-auto max-h-[calc(100dvh-2rem)] overflow-hidden"
           >
-            <h3 className="text-sm font-semibold text-white">Editar Modelo de WhatsApp</h3>
-
-            <div>
-              <label className="block text-slate-300 mb-1">Título do Modelo</label>
-              <input
-                type="text"
-                required
-                value={templateTitle}
-                onChange={(e) => setTemplateTitle(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
-              />
+            <div className="px-5 py-3.5 border-b border-slate-800 bg-slate-950 flex items-center justify-between shrink-0 sticky top-0 z-20">
+              <h3 className="text-sm font-bold text-white">Editar Modelo de WhatsApp</h3>
+              <button
+                type="button"
+                onClick={() => setEditingTemplate(null)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <div>
-              <label className="block text-slate-300 mb-1">Texto com Marcadores Automáticos</label>
-              <textarea
-                rows={8}
-                required
-                value={templateText}
-                onChange={(e) => setTemplateText(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white font-mono leading-relaxed"
-              />
+            <div className="p-4 sm:p-5 overflow-y-auto space-y-3.5 flex-1 overscroll-contain text-xs">
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Título do Modelo</label>
+                <input
+                  type="text"
+                  required
+                  value={templateTitle}
+                  onChange={(e) => setTemplateTitle(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Texto com Marcadores Automáticos</label>
+                <textarea
+                  rows={8}
+                  required
+                  value={templateText}
+                  onChange={(e) => setTemplateText(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white font-mono leading-relaxed"
+                />
+              </div>
             </div>
 
-            <div className="pt-2 flex justify-end gap-2">
+            <div className="px-5 py-3 border-t border-slate-800 bg-slate-950 flex justify-end gap-2 shrink-0 sticky bottom-0 z-20">
               <button
                 type="button"
                 onClick={() => setEditingTemplate(null)}

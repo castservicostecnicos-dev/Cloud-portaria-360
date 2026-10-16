@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'porteiro' | 'supervisor' | 'dev';
+export type UserRole = 'admin' | 'porteiro' | 'supervisor' | 'dev' | 'morador';
 
 export interface UserPermissions {
   canManageUsers: boolean;
@@ -178,6 +178,34 @@ export interface User {
   managedCondoIds?: string[]; // IDs dos condomínios sob responsabilidade deste ADM
   cargo?: string;
   shiftTurn?: string; // Turno de trabalho do porteiro
+  residentId?: string; // ID do cadastro de morador vinculado
+  apartmentId?: string; // Ex: 'apt-101a'
+  blockId?: string; // Ex: 'bloco-a'
+  unitNumber?: string; // Ex: '101'
+  blockName?: string; // Ex: 'Bloco A'
+  cpf?: string;
+}
+
+export interface ResidentInvite {
+  id: string;
+  code: string; // Ex: 'CONV-101A-9821'
+  condoId: string;
+  condoName: string;
+  residentName: string;
+  email?: string;
+  phone: string;
+  apartmentId: string;
+  blockId: string;
+  unitNumber: string;
+  blockName: string;
+  residentId?: string;
+  createdAt: string;
+  expiresAt: string;
+  status: 'pendente' | 'aceito' | 'expirado' | 'cancelado';
+  invitedByUserId: string;
+  invitedByName: string;
+  acceptedAt?: string;
+  acceptedUserId?: string;
 }
 
 export interface DemoPersona {
@@ -643,7 +671,65 @@ export interface CommunicationNotice {
   sendViaWhatsApp: boolean;
   readCount: number;
   attachments?: string[];
+  acknowledgedByResidentIds?: string[];
 }
+
+export interface NoticeTemplate {
+  id: string;
+  name: string;
+  category: NoticeCategory;
+  priority: NoticePriority;
+  title: string;
+  content: string;
+  description: string;
+  suggestedTarget?: 'todos' | 'bloco' | 'apartamento_especifico';
+}
+
+export type ResidentMessageCategory =
+  | 'duvida'
+  | 'solicitacao'
+  | 'aviso_encomenda'
+  | 'aviso_visitante'
+  | 'reclamacao'
+  | 'emergencia'
+  | 'outro';
+
+export type ResidentMessageStatus =
+  | 'pendente'
+  | 'em_atendimento'
+  | 'respondida'
+  | 'finalizada';
+
+export interface ResidentMessageReply {
+  id: string;
+  senderName: string;
+  senderRole: string; // 'porteiro' | 'admin' | 'morador'
+  content: string;
+  createdAt: string;
+}
+
+export interface ResidentMessage {
+  id: string;
+  protocolNumber: string;
+  condoId: string;
+  apartmentId: string;
+  apartmentNumber: string;
+  blockId: string;
+  blockName: string;
+  residentId: string;
+  residentName: string;
+  residentPhone?: string;
+  category: ResidentMessageCategory;
+  subject: string;
+  content: string;
+  status: ResidentMessageStatus;
+  createdAt: string;
+  updatedAt?: string;
+  replies: ResidentMessageReply[];
+  operatorAssigned?: string;
+  resolvedAt?: string;
+}
+
 export type BackupTrigger = 'shift_handover' | 'daily_auto' | 'manual' | 'scheduled';
 
 export interface BackupSnapshot {
@@ -682,4 +768,103 @@ export interface BackupConfig {
   autoDailySnapshotOnLogin: boolean;
   maxLocalSnapshots: number;
   lastDailyBackupDate?: string;
+}
+
+// ==========================================
+// COMMON AREAS & BOOKINGS (ÁREAS COMUNS & RESERVAS)
+// ==========================================
+
+export type CommonAreaType =
+  | 'salao_festas'
+  | 'churrasqueira'
+  | 'espaco_gourmet'
+  | 'quadra'
+  | 'piscina'
+  | 'salao_jogos'
+  | 'academia'
+  | 'coworking'
+  | 'cinema'
+  | 'outro';
+
+export interface BookingTimeSlot {
+  id: string;
+  label: string;
+  startTime: string; // "10:00"
+  endTime: string; // "16:00"
+}
+
+export interface CommonAreaRule {
+  maxCapacity: number;
+  cleaningFee: number;
+  rentalFee: number;
+  minAdvanceDays: number;
+  maxAdvanceDays: number;
+  cancelDeadlineHours: number;
+  maxActiveBookingsPerApartment: number;
+  requiresAdminApproval: boolean;
+  allowedDays: number[]; // 0=Dom, 1=Seg, 2=Ter, 3=Qua, 4=Qui, 5=Sex, 6=Sab
+  availableSlots: BookingTimeSlot[];
+  soundCurfewHour: string;
+  termsAndConditions: string;
+}
+
+export interface CommonArea {
+  id: string;
+  condoId: string;
+  name: string;
+  type: CommonAreaType;
+  description: string;
+  location: string;
+  imageUrl?: string;
+  status: 'disponivel' | 'manutencao' | 'inativo';
+  maintenanceReason?: string;
+  rules: CommonAreaRule;
+  amenities: string[];
+}
+
+export type BookingStatus =
+  | 'confirmada'
+  | 'pendente_aprovacao'
+  | 'realizada'
+  | 'cancelada'
+  | 'rejeitada';
+
+export interface AreaBooking {
+  id: string;
+  protocolNumber: string;
+  condoId: string;
+  areaId: string;
+  areaName: string;
+  apartmentId: string;
+  apartmentNumber: string;
+  blockId: string;
+  blockName: string;
+  residentId: string;
+  residentName: string;
+  residentPhone?: string;
+  residentEmail?: string;
+  bookingDate: string; // "YYYY-MM-DD"
+  slotId?: string;
+  slotLabel: string;
+  startTime: string;
+  endTime: string;
+  purpose: string;
+  expectedGuestsCount: number;
+  guestListNotes?: string;
+  status: BookingStatus;
+  cleaningFee: number;
+  rentalFee: number;
+  totalFee: number;
+  feePaid: boolean;
+  termsAccepted: boolean;
+  notes?: string;
+  adminNotes?: string;
+  createdAt: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancellationReason?: string;
+  inspectionNotes?: string;
+  inspectionPassed?: boolean;
 }

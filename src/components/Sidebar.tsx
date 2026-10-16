@@ -20,6 +20,7 @@ import {
   ShieldAlert,
   LogOut,
   Clock,
+  CalendarCheck,
 } from 'lucide-react';
 import { UserRole } from '../types';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -33,6 +34,7 @@ export type ActiveTab =
   | 'cctv'
   | 'deliveries'
   | 'notices'
+  | 'bookings'
   | 'visitors'
   | 'contractors'
   | 'public_agents'
@@ -67,6 +69,8 @@ interface SidebarProps {
   pendingDeliveriesCount: number;
   openOccurrencesCount: number;
   waitingAuthCount: number;
+  pendingBookingsCount?: number;
+  pendingMessagesCount?: number;
   onLogout?: () => void;
   onOpenShiftHandover?: () => void;
 }
@@ -80,6 +84,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   pendingDeliveriesCount,
   openOccurrencesCount,
   waitingAuthCount,
+  pendingBookingsCount = 0,
+  pendingMessagesCount = 0,
   onLogout,
   onOpenShiftHandover,
 }) => {
@@ -91,7 +97,41 @@ export const Sidebar: React.FC<SidebarProps> = ({
   };
 
   const navGroups: SidebarSection[] =
-    userRole === 'dev'
+    userRole === 'morador'
+      ? [
+          {
+            label: 'Portal do Morador',
+            items: [
+              {
+                id: 'dashboard' as ActiveTab,
+                label: 'Painel Geral',
+                icon: LayoutDashboard,
+              },
+              {
+                id: 'bookings' as ActiveTab,
+                label: 'Áreas & Reservas',
+                icon: CalendarCheck,
+                badge: pendingBookingsCount && pendingBookingsCount > 0 ? String(pendingBookingsCount) : undefined,
+                badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+              },
+              {
+                id: 'notices' as ActiveTab,
+                label: 'Mural & Avisos',
+                icon: Megaphone,
+                badge: pendingMessagesCount > 0 ? String(pendingMessagesCount) : undefined,
+                badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-600/30',
+              },
+              {
+                id: 'occurrences' as ActiveTab,
+                label: 'Livro de Ocorrências',
+                icon: AlertTriangle,
+                badge: openOccurrencesCount > 0 ? String(openOccurrencesCount) : undefined,
+                badgeColor: 'bg-rose-500/20 text-rose-300 border-rose-600/30',
+              },
+            ],
+          },
+        ]
+      : userRole === 'dev'
       ? [
           {
             label: 'DEV Master',
@@ -129,7 +169,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 badge: pendingDeliveriesCount > 0 ? String(pendingDeliveriesCount) : undefined,
                 badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-600/30',
               },
-              { id: 'notices' as ActiveTab, label: 'Mural de Avisos', icon: Megaphone },
+              {
+                id: 'notices' as ActiveTab,
+                label: 'Comunicação & Mural',
+                icon: Megaphone,
+                badge: pendingMessagesCount > 0 ? String(pendingMessagesCount) : undefined,
+                badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-600/30',
+              },
+              {
+                id: 'bookings' as ActiveTab,
+                label: 'Áreas & Reservas',
+                icon: CalendarCheck,
+                badge: pendingBookingsCount && pendingBookingsCount > 0 ? String(pendingBookingsCount) : undefined,
+                badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-600/30',
+              },
               { id: 'visitors' as ActiveTab, label: 'Visitantes', icon: UserPlus },
               { id: 'contractors' as ActiveTab, label: 'Prestadores', icon: Wrench },
               { id: 'public_agents' as ActiveTab, label: 'Agentes Públicos', icon: BadgeCheck },
@@ -273,6 +326,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-[10px] text-slate-400 block truncate capitalize">
                 {currentUser.role === 'dev'
                   ? 'Dev Master (Independente)'
+                  : currentUser.role === 'morador'
+                  ? `Morador(a) · Apt ${currentUser.unitNumber || ''} (${currentUser.blockName || 'Torre'})`
                   : currentUser.role === 'admin'
                   ? `ADM Predial (Observador) · ${condo.name}`
                   : `${currentUser.role} · ${condo.name}`}
@@ -281,7 +336,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           <div className="space-y-1.5 pt-1">
-            {userRole !== 'dev' && onOpenShiftHandover && (
+            {userRole !== 'dev' && userRole !== 'morador' && onOpenShiftHandover && (
               <button
                 onClick={() => {
                   onCloseMobile();
