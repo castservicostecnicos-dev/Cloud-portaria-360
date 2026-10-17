@@ -56,7 +56,7 @@ interface BookingsViewProps {
   onTriggerWhatsApp?: (payload: WhatsAppPayload) => void;
 }
 
-type SubTab = 'explore' | 'new_booking' | 'manage' | 'rules';
+type SubTab = 'explore' | 'calendar' | 'new_booking' | 'manage' | 'history' | 'rules';
 
 const AREA_TYPE_ICONS: Record<CommonAreaType, any> = {
   salao_festas: Sparkles,
@@ -269,6 +269,12 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ onTriggerWhatsApp })
   const currentSelectedArea = useMemo(() => {
     return commonAreas.find((a) => a.id === selectedCalendarAreaId) || commonAreas[0];
   }, [commonAreas, selectedCalendarAreaId]);
+
+  // Live real-time availability and conflict check for the booking form
+  const liveAvailability = useMemo(() => {
+    if (!formAreaId || !formDate || !formSlotId) return null;
+    return storage.checkAreaAvailability(formAreaId, formDate, formSlotId);
+  }, [formAreaId, formDate, formSlotId, bookings]);
 
   // Calendar days generation
   const calendarDays = useMemo(() => {
@@ -757,59 +763,83 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ onTriggerWhatsApp })
       </div>
 
       {/* Navigation Sub-Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto">
+      <div className="flex items-center gap-1.5 p-1.5 bg-slate-900 border border-slate-800 rounded-xl overflow-x-auto shadow-sm">
         <button
           onClick={() => setActiveSubTab('explore')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
             activeSubTab === 'explore'
-              ? 'bg-amber-500 text-slate-950 shadow-md'
+              ? 'bg-amber-500 text-slate-950 font-bold shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <Building2 className="w-4 h-4" />
+          <span>Áreas Disponíveis ({commonAreas.filter((a) => a.status !== 'inativo').length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('calendar')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+            activeSubTab === 'calendar'
+              ? 'bg-amber-500 text-slate-950 font-bold shadow-md'
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
           <CalendarDays className="w-4 h-4" />
-          <span>Disponibilidade & Espaços</span>
+          <span>Calendário de Reservas</span>
         </button>
 
         <button
           onClick={() => setActiveSubTab('new_booking')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
             activeSubTab === 'new_booking'
-              ? 'bg-amber-500 text-slate-950 shadow-md'
+              ? 'bg-amber-500 text-slate-950 font-bold shadow-md'
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
           <Plus className="w-4 h-4" />
-          <span>Fazer Reserva</span>
+          <span>Solicitar Reserva</span>
         </button>
 
         <button
           onClick={() => setActiveSubTab('manage')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all relative ${
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all relative cursor-pointer ${
             activeSubTab === 'manage'
-              ? 'bg-amber-500 text-slate-950 shadow-md'
+              ? 'bg-amber-500 text-slate-950 font-bold shadow-md'
               : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
           }`}
         >
-          <FileText className="w-4 h-4" />
-          <span>Gestão & Comprovantes</span>
+          <Shield className="w-4 h-4" />
+          <span>Aprovações & Gestão</span>
           {stats.pendingCount > 0 && (
-            <span className="ml-1 px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-amber-400 text-slate-950">
+            <span className="ml-1 px-1.5 py-0.2 text-[10px] font-bold rounded-full bg-amber-400 text-slate-950 animate-pulse">
               {stats.pendingCount}
             </span>
           )}
         </button>
 
+        <button
+          onClick={() => setActiveSubTab('history')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+            activeSubTab === 'history'
+              ? 'bg-amber-500 text-slate-950 font-bold shadow-md'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+          }`}
+        >
+          <FileText className="w-4 h-4" />
+          <span>Histórico de Reservas</span>
+        </button>
+
         {isAdminOrDev && (
           <button
             onClick={() => setActiveSubTab('rules')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
               activeSubTab === 'rules'
-                ? 'bg-amber-500 text-slate-950 shadow-md'
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-md'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
             }`}
           >
             <Settings className="w-4 h-4" />
-            <span>Regras & Espaços (ADM)</span>
+            <span>Políticas & Espaços (ADM)</span>
           </button>
         )}
       </div>
@@ -1889,10 +1919,10 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ onTriggerWhatsApp })
       {/* MODAL 1: OFFICIAL VOUCHER / COMPROVANTE DE RESERVA         */}
       {/* ========================================================= */}
       {viewingVoucherBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg my-auto shadow-2xl animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[calc(100dvh-2rem)] overflow-hidden">
             {/* Voucher Header with Watermark styling */}
-            <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-orange-500 p-5 text-slate-950 relative">
+            <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-orange-500 p-4 sm:p-5 text-slate-950 relative shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <CalendarCheck className="w-6 h-6" />
@@ -1919,7 +1949,7 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ onTriggerWhatsApp })
             </div>
 
             {/* Voucher Content */}
-            <div className="p-6 space-y-5 bg-slate-900">
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 bg-slate-900 overflow-y-auto flex-1 overscroll-contain">
               {/* Protocol Bar */}
               <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-slate-800">
                 <div>
@@ -2053,8 +2083,8 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ onTriggerWhatsApp })
       {/* MODAL 2: ADMIN APPROVAL MODAL                             */}
       {/* ========================================================= */}
       {approvalModalBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
             <div className="flex items-center gap-3 text-emerald-400">
               <CheckCircle2 className="w-6 h-6" />
               <h3 className="text-base font-bold text-white">Aprovar Reserva de Espaço</h3>
@@ -2101,8 +2131,8 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ onTriggerWhatsApp })
       {/* MODAL 3: ADMIN REJECTION MODAL                            */}
       {/* ========================================================= */}
       {rejectionModalBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
             <div className="flex items-center gap-3 text-rose-400">
               <AlertTriangle className="w-6 h-6" />
               <h3 className="text-base font-bold text-white">Rejeitar Reserva de Espaço</h3>
@@ -2150,8 +2180,8 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ onTriggerWhatsApp })
       {/* MODAL 4: INSPECTION & CHECKOUT CHECKLIST MODAL            */}
       {/* ========================================================= */}
       {inspectionModalBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain">
             <div className="flex items-center gap-3 text-sky-400">
               <CheckSquare className="w-6 h-6" />
               <div>
@@ -2259,8 +2289,8 @@ export const BookingsView: React.FC<BookingsViewProps> = ({ onTriggerWhatsApp })
       {/* MODAL 5: CANCEL RESERVATION MODAL                         */}
       {/* ========================================================= */}
       {cancellationModalBooking && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 sm:p-6 shadow-2xl space-y-4 my-auto">
             <div className="flex items-center gap-3 text-rose-400">
               <XCircle className="w-6 h-6" />
               <h3 className="text-base font-bold text-white">Cancelar Reserva de Espaço</h3>
@@ -2437,9 +2467,9 @@ const AreaConfigModal: React.FC<AreaConfigModalProps> = ({ area, onClose, onSave
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl space-y-5">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-start sm:items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain modal-overlay">
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl my-auto max-h-[calc(100dvh-2rem)] flex flex-col overflow-hidden shadow-2xl">
+        <div className="flex items-center justify-between p-4 sm:p-5 border-b border-slate-800 shrink-0">
           <div className="flex items-center gap-2.5">
             <Settings className="w-5 h-5 text-amber-400" />
             <h3 className="text-base font-bold text-white">
@@ -2454,7 +2484,7 @@ const AreaConfigModal: React.FC<AreaConfigModalProps> = ({ area, onClose, onSave
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 overscroll-contain">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1">
@@ -2707,17 +2737,17 @@ const AreaConfigModal: React.FC<AreaConfigModalProps> = ({ area, onClose, onSave
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800 sticky bottom-0 bg-slate-900/95 py-3 -mx-4 sm:-mx-6 px-4 sm:px-6 mt-4">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl font-medium"
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded-xl font-medium cursor-pointer"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl"
+              className="px-5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl cursor-pointer"
             >
               Salvar Espaço Comum
             </button>

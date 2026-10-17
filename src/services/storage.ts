@@ -2081,7 +2081,8 @@ class StorageService {
     else list.unshift(log); // Newer on top
     this.setItem(key, list);
     firestoreSync.syncAccessLog(log, this.getActiveCondoId());
-    this.addAuditLog('Controle de Acesso', 'Acesso', `${log.personType.toUpperCase()}: ${log.personName} - Status: ${log.status} (Persistido Firestore)`);
+    const personTypeLabel = (log.personType || 'acesso').toUpperCase();
+    this.addAuditLog('Controle de Acesso', 'Acesso', `${personTypeLabel}: ${log.personName} - Status: ${log.status} (Persistido Firestore)`);
   }
 
   // Deliveries
@@ -2099,7 +2100,9 @@ class StorageService {
     else list.unshift(del);
     this.setItem(key, list);
     firestoreSync.syncDelivery(del, this.getActiveCondoId());
-    this.addAuditLog('Encomendas / Recebimentos', 'Recebimento', `${del.type.toUpperCase()} ${del.code} para ${del.recipientName} - Status: ${del.status} (Salvo Firestore)`);
+    const delType = (del.type || 'encomenda').toUpperCase();
+    const delCode = del.code || del.id || 'S/N';
+    this.addAuditLog('Encomendas / Recebimentos', 'Recebimento', `${delType} ${delCode} para ${del.recipientName} - Status: ${del.status} (Salvo Firestore)`);
   }
 
   public deleteDelivery(id: string) {
@@ -2167,7 +2170,8 @@ class StorageService {
     if (idx >= 0) list[idx] = key;
     else list.unshift(key);
     this.setItem(scopedKey, list);
-    this.addAuditLog('Chaves e Controles', 'Controle', `${key.type.toUpperCase()} ${key.number} (${key.identification}) - ${key.status}`);
+    const keyType = (key.type || 'chave').toUpperCase();
+    this.addAuditLog('Chaves e Controles', 'Controle', `${keyType} ${key.number || 'S/N'} (${key.identification || ''}) - ${key.status}`);
   }
 
   // Authorizations
@@ -2184,7 +2188,7 @@ class StorageService {
     if (idx >= 0) list[idx] = auth;
     else list.unshift(auth);
     this.setItem(key, list);
-    this.addAuditLog('Autorização', 'Acesso', `Autorização para ${auth.authorizedName} (${auth.type}) salva`);
+    this.addAuditLog('Autorização', 'Acesso', `Autorização para ${auth.authorizedName} (${auth.type || 'acesso'}) salva`);
   }
 
   // Special services / Removals / Works
@@ -2201,7 +2205,8 @@ class StorageService {
     if (idx >= 0) list[idx] = spec;
     else list.unshift(spec);
     this.setItem(key, list);
-    this.addAuditLog('Serviço Especial / Mudança', 'Operações', `${spec.type.toUpperCase()}: ${spec.responsibleName}`);
+    const specType = (spec.type || 'serviço').toUpperCase();
+    this.addAuditLog('Serviço Especial / Mudança', 'Operações', `${specType}: ${spec.responsibleName || 'Responsável'}`);
   }
 
   // Shift entries

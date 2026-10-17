@@ -14,19 +14,80 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Cloudflare portaria 360" />
     <script>
-      // Gracefully prevent Vite HMR WebSocket errors from bubbling in sandbox iframe environment
-      window.addEventListener('error', function(event) {
-        if (event && (event.message?.includes('WebSocket') || event.filename?.includes('@vite/client'))) {
-          event.stopImmediatePropagation();
-          event.preventDefault();
+      (function() {
+        // Intercept Vite HMR WebSocket in sandbox iframe environment
+        var OrigWebSocket = window.WebSocket;
+        if (OrigWebSocket) {
+          window.WebSocket = function(url, protocols) {
+            if (
+              protocols === 'vite-hmr' ||
+              (typeof url === 'string' && (url.includes('@vite') || url.includes('vite-hmr') || url.includes('/@vite/client')))
+            ) {
+              var emitter = new EventTarget();
+              var dummy = {
+                readyState: 1, // OPEN
+                url: url,
+                protocol: 'vite-hmr',
+                send: function() {},
+                close: function() {},
+                addEventListener: function(type, listener, options) {
+                  return emitter.addEventListener(type, listener, options);
+                },
+                removeEventListener: function(type, listener, options) {
+                  return emitter.removeEventListener(type, listener, options);
+                },
+                dispatchEvent: function(event) {
+                  return emitter.dispatchEvent(event);
+                },
+                onopen: null,
+                onclose: null,
+                onmessage: null,
+                onerror: null,
+              };
+              setTimeout(function() {
+                var openEvt = new Event('open');
+                if (typeof dummy.onopen === 'function') dummy.onopen(openEvt);
+                emitter.dispatchEvent(openEvt);
+              }, 0);
+              return dummy;
+            }
+            return new OrigWebSocket(url, protocols);
+          };
+          window.WebSocket.prototype = OrigWebSocket.prototype;
+          window.WebSocket.CONNECTING = OrigWebSocket.CONNECTING;
+          window.WebSocket.OPEN = OrigWebSocket.OPEN;
+          window.WebSocket.CLOSING = OrigWebSocket.CLOSING;
+          window.WebSocket.CLOSED = OrigWebSocket.CLOSED;
         }
-      }, true);
-      window.addEventListener('unhandledrejection', function(event) {
-        if (event && event.reason && String(event.reason).includes('WebSocket')) {
-          event.stopImmediatePropagation();
-          event.preventDefault();
-        }
-      }, true);
+
+        // Suppress [vite] WebSocket errors from bubbling up to error overlays
+        var origConsoleError = console.error;
+        console.error = function() {
+          var args = Array.prototype.slice.call(arguments);
+          var isViteWsError = args.some(function(arg) {
+            if (!arg) return false;
+            var str = typeof arg === 'string' ? arg : (arg.message || String(arg));
+            return str.includes('[vite]') || str.includes('WebSocket') || str.includes('@vite/client');
+          });
+          if (isViteWsError) return;
+          return origConsoleError.apply(console, args);
+        };
+
+        window.addEventListener('error', function(event) {
+          if (event && (event.message?.includes('WebSocket') || event.filename?.includes('@vite/client'))) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(event) {
+          var reasonStr = String(event?.reason?.message || event?.reason || '');
+          if (reasonStr.includes('WebSocket') || reasonStr.includes('@vite/client')) {
+            event.stopImmediatePropagation();
+            event.preventDefault();
+          }
+        }, true);
+      })();
     </script>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />

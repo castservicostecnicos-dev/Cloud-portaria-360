@@ -6,7 +6,7 @@ import http from 'http';
 import https from 'https';
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(express.json());
 
@@ -348,6 +348,7 @@ async function startServer() {
         hmr: false,
       },
       appType: 'spa',
+      root: process.cwd(),
     });
     app.use(vite.middlewares);
   } else {
@@ -358,9 +359,12 @@ async function startServer() {
     });
   }
 
-  httpServer.listen(PORT, () => {
-    console.log(`Portaria 360 Full-Stack Server running on port ${PORT}`);
+  httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`Portaria 360 Full-Stack Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
-startServer();
+startServer().catch((err) => {
+  console.error('Failed to start server:', err);
+  process.exit(1);
+});

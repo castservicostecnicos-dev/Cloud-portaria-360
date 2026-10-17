@@ -227,11 +227,15 @@ export default function App() {
           onOpenShiftHandover={() => setIsShiftModalOpen(true)}
         />
 
-        {/* Main Content Workspace */}
+        {/* Main Content Workspace - full width scroll listener with touch-action */}
         <main
           id="main-content"
-          className={`flex-1 overflow-y-auto overflow-x-hidden min-h-0 p-3 sm:p-5 lg:p-8 max-w-7xl mx-auto w-full ${currentUser.role === 'dev' || currentUser.role === 'morador' ? 'pb-8' : 'pb-24 lg:pb-8'}`}
+          className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 w-full relative"
+          style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
         >
+          <div
+            className={`max-w-7xl mx-auto w-full min-w-0 p-3 sm:p-5 lg:p-8 ${currentUser.role === 'dev' || currentUser.role === 'morador' ? 'pb-8' : 'pb-24 lg:pb-8'}`}
+          >
 
           {currentUser.role === 'dev' ? (
             <DevMasterView onOpenWhatsApp={handleOpenWhatsApp} />
@@ -346,6 +350,7 @@ export default function App() {
               {activeTab === 'admin' && <AdminSettingsView />}
             </>
           )}
+          </div>
         </main>
       </div>
 

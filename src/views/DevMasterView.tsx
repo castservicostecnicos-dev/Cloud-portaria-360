@@ -94,24 +94,12 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
     return () => unsub();
   }, []);
 
-  // Lock main scroll when modal is open and ensure restoration
+  // Ensure scroll is restored cleanly if previously affected
   useEffect(() => {
-    const isAnyModalOpen = Boolean(
-      isCreateModalOpen || editingCondo || resetPasswordCondo || condoToDelete || viewingPorteirosCondo
-    );
     const mainEl = document.getElementById('main-content');
-    if (isAnyModalOpen) {
-      if (mainEl) mainEl.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
-    } else {
-      if (mainEl) mainEl.style.overflow = '';
-      document.body.style.overflow = '';
-    }
-    return () => {
-      if (mainEl) mainEl.style.overflow = '';
-      document.body.style.overflow = '';
-    };
-  }, [isCreateModalOpen, editingCondo, resetPasswordCondo, condoToDelete, viewingPorteirosCondo]);
+    if (mainEl && mainEl.style.overflow === 'hidden') mainEl.style.overflow = '';
+    if (document.body.style.overflow === 'hidden') document.body.style.overflow = '';
+  }, []);
 
   const triggerFeedback = (message: string, type: 'success' | 'error' = 'success') => {
     setFeedback({ type, message });
