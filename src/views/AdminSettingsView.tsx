@@ -74,7 +74,8 @@ export const AdminSettingsView: React.FC = () => {
   const [canConfigCondo, setCanConfigCondo] = useState(false);
   const [canDeleteRecords, setCanDeleteRecords] = useState(false);
   const [canViewReports, setCanViewReports] = useState(true);
-  const [showPasswordText, setShowPasswordText] = useState(false);
+  const [showPasswordText, setShowPasswordText] = useState(true);
+  const [revealedPasswords, setRevealedPasswords] = useState<Record<string, boolean>>({});
 
   // Template editor modal
   const [editingTemplate, setEditingTemplate] = useState<WhatsAppTemplate | null>(null);
@@ -171,7 +172,7 @@ export const AdminSettingsView: React.FC = () => {
       setEditingUser(u);
       setUserName(u.name);
       setUserEmail(u.email);
-      setUserPassword(u.password || '');
+      setUserPassword(u.password || 'portaria123');
       setUserPhone(u.phone);
       setUserRole(u.role);
       setUserActive(u.active);
@@ -180,11 +181,12 @@ export const AdminSettingsView: React.FC = () => {
       setCanConfigCondo(u.permissions.canConfigCondo);
       setCanDeleteRecords(u.permissions.canDeleteRecords);
       setCanViewReports(u.permissions.canViewReports);
+      setShowPasswordText(true);
     } else {
       setEditingUser(null);
       setUserName('');
       setUserEmail('');
-      setUserPassword('');
+      setUserPassword('portaria123');
       setUserPhone('');
       setUserRole('porteiro');
       setUserActive(true);
@@ -193,6 +195,7 @@ export const AdminSettingsView: React.FC = () => {
       setCanConfigCondo(false);
       setCanDeleteRecords(false);
       setCanViewReports(true);
+      setShowPasswordText(true);
     }
     setShowUserModal(true);
   };
@@ -204,7 +207,7 @@ export const AdminSettingsView: React.FC = () => {
       id: editingUser ? editingUser.id : `user-${Date.now()}`,
       name: userName,
       email: userEmail.trim().toLowerCase(),
-      password: userPassword || (isDev ? 'cast@2468' : 'senha123'),
+      password: userPassword.trim() || (isDev ? 'cast@2468' : 'portaria123'),
       role: isDev ? 'dev' : userRole,
       phone: userPhone,
       active: userActive,
@@ -899,10 +902,29 @@ export const AdminSettingsView: React.FC = () => {
                               </span>
                             )}
                           </td>
-                          <td className="py-3 px-4 font-mono text-[11px] text-slate-400">
-                            <span className="bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                              {currentUser.role === 'dev' ? u.password || '••••••••' : '••••••••'}
-                            </span>
+                          <td className="py-3 px-4 font-mono text-[11px]">
+                            <div className="flex items-center gap-1.5">
+                              <span className="bg-slate-950 px-2 py-0.5 rounded border border-slate-800 text-amber-300 font-bold">
+                                {revealedPasswords[u.id] ? u.password || 'portaria123' : '••••••••'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setRevealedPasswords((prev) => ({
+                                    ...prev,
+                                    [u.id]: !prev[u.id],
+                                  }))
+                                }
+                                className="p-1 hover:text-white text-slate-500 hover:bg-slate-800 rounded transition-colors cursor-pointer"
+                                title={revealedPasswords[u.id] ? 'Ocultar senha' : 'Ver senha de acesso'}
+                              >
+                                {revealedPasswords[u.id] ? (
+                                  <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+                                ) : (
+                                  <Eye className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
                           </td>
                           <td className="py-3 px-4 text-[10px] space-x-1">
                             {u.permissions.canManageUsers && (
@@ -1925,29 +1947,48 @@ export const AdminSettingsView: React.FC = () => {
               )}
 
               {/* Password configuration */}
-              <div>
-                <label className="block text-slate-300 font-semibold mb-1">
-                  Senha de Acesso {currentUser.role === 'dev' ? '*' : '(Padrão do Sistema)'}
-                </label>
+              <div className="p-3.5 bg-slate-950 border border-slate-800 rounded-xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-slate-200 font-bold text-xs flex items-center gap-1.5">
+                    <Key className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Senha de Acesso do {userRole === 'porteiro' ? 'Porteiro' : 'Usuário'} *</span>
+                  </label>
+                  <span className="text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded font-mono font-semibold">
+                    Padrão: portaria123
+                  </span>
+                </div>
+
                 <div className="relative">
                   <input
                     type={showPasswordText ? 'text' : 'password'}
-                    placeholder={currentUser.role === 'dev' ? 'Defina a senha de acesso' : 'senha123'}
+                    required
+                    placeholder="Ex: portaria123"
                     value={userPassword}
                     onChange={(e) => setUserPassword(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 pr-10 text-white font-mono text-xs focus:outline-none focus:border-emerald-500 transition-colors"
+                    className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 pr-24 text-white font-mono text-xs focus:outline-none focus:border-emerald-500 transition-colors"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPasswordText(!showPasswordText)}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-1"
-                    title={showPasswordText ? 'Ocultar senha' : 'Ver senha'}
-                  >
-                    {showPasswordText ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowPasswordText(!showPasswordText)}
+                      className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                      title={showPasswordText ? 'Ocultar senha' : 'Ver senha'}
+                    >
+                      {showPasswordText ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setUserPassword('portaria123')}
+                      className="text-[10px] px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition-colors cursor-pointer"
+                      title="Usar senha padrão portaria123"
+                    >
+                      Padrão
+                    </button>
+                  </div>
                 </div>
-                <p className="text-[10px] text-slate-500 mt-1">
-                  {userPassword ? 'Senha preenchida e conferida.' : 'Se vazio, será usada a senha inicial padrão "senha123".'}
+
+                <p className="text-[10px] text-slate-400">
+                  Defina a senha com a qual o {userRole === 'porteiro' ? 'porteiro' : 'usuário'} fará login no sistema. Se desejar usar o padrão, mantenha <code className="text-amber-400 font-mono font-bold">portaria123</code>.
                 </p>
               </div>
 

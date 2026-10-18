@@ -239,7 +239,7 @@ export const ShiftHandoverModal: React.FC<ShiftHandoverModalProps> = ({
           id: `usr-op-${Date.now()}`,
           name: cleanNextName,
           email: `${cleanNextName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '.')}@portaria.local`,
-          password: 'senha',
+          password: 'portaria123',
           role: 'porteiro',
           phone: '',
           condoId: condo.id,

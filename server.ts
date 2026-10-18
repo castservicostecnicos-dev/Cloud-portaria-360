@@ -6,7 +6,7 @@ import http from 'http';
 import https from 'https';
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3000;
+const PORT = 3000;
 
 app.use(express.json());
 
@@ -346,6 +346,7 @@ async function startServer() {
       server: {
         middlewareMode: true,
         hmr: false,
+        ws: false,
       },
       appType: 'spa',
       root: process.cwd(),

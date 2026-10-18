@@ -345,8 +345,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   required
                   placeholder={
                     profileType === 'morador'
-                      ? 'ana.albuquerque@gmail.com ou CPF'
-                      : 'joao.portaria@solardaspalmeiras.com.br'
+                      ? 'Digite seu e-mail ou CPF'
+                      : 'Digite seu e-mail de acesso'
                   }
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
@@ -406,43 +406,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     {profileType === 'morador' ? 'Entrar no Portal do Morador' : 'Entrar na Portaria'}
                   </span>
                 </button>
-              </div>
-
-              {/* Acessos Rápidos / Credenciais Disponíveis */}
-              <div className="pt-3 border-t border-slate-800 space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>Acesso Rápido de Testes:</span>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProfileType('morador');
-                      setMoradorSubTab('login');
-                      setIdentifier('ana.albuquerque@gmail.com');
-                      setPassword('morador@ana101');
-                      setErrorMsg(null);
-                    }}
-                    className="p-2 rounded-lg bg-slate-950 border border-purple-500/40 hover:border-purple-400 text-left transition-colors cursor-pointer group"
-                  >
-                    <span className="block text-[10px] font-bold text-purple-300">Moradora (Apt 101)</span>
-                    <span className="block text-[9px] text-slate-400 truncate">Ana Carolina</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setProfileType('operador');
-                      setIdentifier('joao.portaria@solardaspalmeiras.com.br');
-                      setPassword('portaria@joao');
-                      setErrorMsg(null);
-                    }}
-                    className="p-2 rounded-lg bg-slate-950 border border-emerald-500/30 hover:border-emerald-500 text-left transition-colors cursor-pointer group"
-                  >
-                    <span className="block text-[10px] font-bold text-emerald-300">Porteiro (Solar)</span>
-                    <span className="block text-[9px] text-slate-400 truncate">joao.portaria@...</span>
-                  </button>
-                </div>
               </div>
             </form>
           )

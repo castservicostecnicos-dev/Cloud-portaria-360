@@ -78,6 +78,7 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
   const [newPorteiroName, setNewPorteiroName] = useState('');
   const [newPorteiroEmail, setNewPorteiroEmail] = useState('');
   const [newPorteiroPassword, setNewPorteiroPassword] = useState('portaria123');
+  const [showNewPorteiroPassword, setShowNewPorteiroPassword] = useState(true);
   const [newPorteiroShift, setNewPorteiroShift] = useState('');
 
   // Feedback banner
@@ -1399,6 +1400,7 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
                         <span>Nome: <strong className={newPorteiroName ? 'text-white' : 'text-slate-500 italic'}>{newPorteiroName || '(preencha o nome)'}</strong></span>
                         <span>E-mail: <strong className={newPorteiroEmail ? 'text-sky-300 font-mono' : 'text-slate-500 italic'}>{newPorteiroEmail || '(preencha o e-mail)'}</strong></span>
                         <span>Turno: <strong className={newPorteiroShift ? 'text-amber-300 font-mono' : 'text-amber-500/80 italic'}>{newPorteiroShift || '(selecione o turno)'}</strong></span>
+                        <span>Senha: <strong className="text-emerald-300 font-mono font-bold">{newPorteiroPassword || 'portaria123'}</strong></span>
                       </div>
                     </div>
 
@@ -1429,13 +1431,42 @@ export const DevMasterView: React.FC<DevMasterViewProps> = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-slate-300 font-medium mb-1">Senha Inicial</label>
-                        <input
-                          type="text"
-                          value={newPorteiroPassword}
-                          onChange={(e) => setNewPorteiroPassword(e.target.value)}
-                          className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-emerald-500 transition-colors"
-                        />
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-slate-300 font-medium text-xs flex items-center gap-1">
+                            <Key className="w-3 h-3 text-amber-400" />
+                            <span>Senha do Porteiro *</span>
+                          </label>
+                          <span className="text-[10px] text-amber-300 font-mono bg-amber-500/10 px-1.5 py-0.2 rounded border border-amber-500/20">
+                            Padrão: portaria123
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <input
+                            type={showNewPorteiroPassword ? 'text' : 'password'}
+                            required
+                            value={newPorteiroPassword}
+                            onChange={(e) => setNewPorteiroPassword(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 pr-18 text-white font-mono text-xs focus:outline-none focus:border-emerald-500 transition-colors"
+                          />
+                          <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => setShowNewPorteiroPassword(!showNewPorteiroPassword)}
+                              className="p-1 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                              title={showNewPorteiroPassword ? 'Ocultar senha' : 'Ver senha'}
+                            >
+                              {showNewPorteiroPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setNewPorteiroPassword('portaria123')}
+                              className="text-[10px] px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition-colors cursor-pointer"
+                              title="Restaurar padrão portaria123"
+                            >
+                              Padrão
+                            </button>
+                          </div>
+                        </div>
                       </div>
                       <div>
                         <label className="block text-slate-300 font-medium mb-1">Turno de Trabalho</label>
